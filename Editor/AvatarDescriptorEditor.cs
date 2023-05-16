@@ -33,7 +33,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (_cachedAvatar && GlobalObjectId.GetGlobalObjectIdSlow(_cachedAvatar).identifierType == 2)
                 {
                     avatar.avatarDescriptor = new SceneReference(_cachedAvatar);
-                    avatar.avatarName = _cachedAvatar.name;
+                    // might be reverted if it's individual asset but
+                    // this is good for DescriptorSet
+                    avatar.name = avatar.avatarName = _cachedAvatar.name;
                     _settingAvatar = false;
                 }
 
