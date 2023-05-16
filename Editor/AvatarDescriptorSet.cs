@@ -41,6 +41,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             objectId = id.targetObjectId;
             prefabId = id.targetPrefabId;
         }
+
+        public Object TryResolve()
+        {
+            var sceneGuid = AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(scene));
+            System.Diagnostics.Debug.Assert(
+                GlobalObjectId.TryParse($"GlobalObjectId_V1-2-{sceneGuid}-{objectId}-{prefabId}", out var oid));
+            return GlobalObjectId.GlobalObjectIdentifierToObjectSlow(oid);
+        }
     }
 
     [Serializable]
