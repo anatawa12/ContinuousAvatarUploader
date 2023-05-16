@@ -1,7 +1,6 @@
 using System;
 using UnityEditor;
 using UnityEngine;
-using VRC.SDK3.Avatars.Components;
 using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
@@ -11,8 +10,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         public string avatarName;
         public SceneReference avatarDescriptor;
-        public PlatformSpecificInfo quest = new PlatformSpecificInfo();
-        public PlatformSpecificInfo windows = new PlatformSpecificInfo();
+        public PlatformSpecificInfo quest = new PlatformSpecificInfo()
+        {
+            versionNamePrefix = "quest"
+        };
+        public PlatformSpecificInfo windows = new PlatformSpecificInfo()
+        {
+            versionNamePrefix = "v"
+        };
     }
 
     [Serializable]
@@ -50,9 +55,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class PlatformSpecificInfo
     {
         public bool enabled;
-        public string tagPrefix = "";
-        public string tagSuffix = "";
         [Tooltip("prefix of version name on the description. for (v10), 'v' is the prefix.")]
         public string versionNamePrefix = "";
+        public bool gitEnabled;
+        public string tagPrefix = "";
+        public string tagSuffix = "";
     }
 }

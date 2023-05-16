@@ -72,9 +72,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             if (info.enabled)
             {
-                info.tagPrefix = EditorGUILayout.TextField("Tag Prefix", info.tagPrefix);
-                info.tagSuffix = EditorGUILayout.TextField("Tag Suffix", info.tagSuffix);
                 info.versionNamePrefix = EditorGUILayout.TextField("Version Prefix", info.versionNamePrefix);
+                GUILayout.Label($"'（{info.versionNamePrefix}<version>）'will be added in avatar description");
+                if (info.gitEnabled)
+                {
+                    info.tagPrefix = EditorGUILayout.TextField("Tag Prefix", info.tagPrefix);
+                    info.tagSuffix = EditorGUILayout.TextField("Tag Suffix", info.tagSuffix);
+                    GUILayout.Label($"tag name will be '{info.tagPrefix}<version>{info.tagSuffix}'");
+                }
             }
         }
 
