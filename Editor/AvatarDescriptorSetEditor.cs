@@ -1,121 +1,84 @@
-using System;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
+using Debug = System.Diagnostics.Debug;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     [CustomEditor(typeof(AvatarDescriptorSet))]
     public class AvatarDescriptorSetEditor : UnityEditor.Editor
     {
-        private Vector2 positoon = new Vector2();
+        private AvatarDescriptorSet _asset;
 
-        public override void OnInspectorGUI()
+        public override VisualElement CreateInspectorGUI()
         {
-            var asset = (AvatarDescriptorSet)target;
-            EditorGUI.BeginChangeCheck();
+            _asset = (AvatarDescriptorSet)target;
 
-            GUILayout.Label("Avatars");
+            var root = new VisualElement()
+            {
+                name = "RootElement"
+            };
+            var inspectors = new VisualElement()
+            {
+                name = "Inspectors"
+            };
 
-            HorizontalLine();
+            foreach (var assetAvatar in _asset.avatars)
+                inspectors.Add(CreateDescriptorInspector(assetAvatar));
 
-            positoon = EditorGUILayout.BeginScrollView(positoon);
-            AvatarDescriptors(asset);
-            EditorGUILayout.EndScrollView();
+            VRCAvatarDescriptor avatarDescriptor = null;
+            bool enabled = true;
+            var trailer = new IMGUIContainer(() =>
+            {
+                EditorGUI.BeginChangeCheck();
+                avatarDescriptor = EditorGUILayout.ObjectField("Avatar to Add", avatarDescriptor,
+                    typeof(VRCAvatarDescriptor), true) as VRCAvatarDescriptor;
+                if (EditorGUI.EndChangeCheck())
+                {
+                    var id = GlobalObjectId.GetGlobalObjectIdSlow(avatarDescriptor);
+                    enabled = id.identifierType == 2;
+                }
 
-            if (EditorGUI.EndChangeCheck())
-                EditorUtility.SetDirty(asset);
+                EditorGUI.BeginDisabledGroup(!avatarDescriptor || !enabled);
+                if (GUILayout.Button("Add Avatar"))
+                {
+                    Debug.Assert(avatarDescriptor != null, nameof(avatarDescriptor) + " != null");
+                    var newObj = ScriptableObject.CreateInstance<AvatarDescriptor>();
+                    newObj.avatarDescriptor = new SceneReference(avatarDescriptor);
+                    newObj.name = newObj.avatarName = avatarDescriptor.gameObject.name;
+
+                    ArrayUtility.Add(ref _asset.avatars, newObj);
+                    EditorUtility.SetDirty(_asset);
+                    AssetDatabase.AddObjectToAsset(newObj, _asset);
+                    inspectors.Add(CreateDescriptorInspector(newObj));
+                }
+
+                EditorGUI.EndDisabledGroup();
+            });
+
+            root.Add(inspectors);
+            root.Add(trailer);
+
+            return root;
         }
 
-        private string tagNamePrompt;
-
-        private AvatarToAddToastElement avatarToAddToastElement;
-        
-        private void AvatarDescriptors(AvatarDescriptorSet asset)
+        private VisualElement CreateDescriptorInspector(AvatarDescriptor descriptor)
         {
-            for (var i = 0; i < asset.avatars.Length; i++)
+            var container = new VisualElement();
+            container.Add(new InspectorElement(descriptor));
+            container.Add(new IMGUIContainer(() =>
             {
-                var avatar = asset.avatars[i];
-                if (!avatar.cachedAvatar)
-                    avatar.cachedAvatar = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-                if (avatar.cachedAvatar)
+                if (GUILayout.Button("Remove Avatar"))
                 {
-                    EditorGUILayout.ObjectField("Avatar", avatar.cachedAvatar, typeof(VRCAvatarDescriptor), false);
+                    container.parent.Remove(container);
+                    ArrayUtility.Remove(ref _asset.avatars, descriptor);
+                    EditorUtility.SetDirty(target);
                 }
-                else
-                {
-                    EditorGUILayout.LabelField("Avatar", avatar.name);
-                    EditorGUILayout.ObjectField("In scene", avatar.avatarDescriptor.scene, typeof(SceneAsset), false);
-                }
-                PlatformSpecificInfo("PC Windows", avatar.windows);
-                PlatformSpecificInfo("Quest", avatar.quest);
                 HorizontalLine();
-            }
-            // TODO: list first
-
-
-            var toAdd = EditorGUILayout.ObjectField("Avatar to Add", null, typeof(VRCAvatarDescriptor), true);
-            if (toAdd)
-            {
-                avatarToAddToastElement = AvatarToAddToastElement.None;
-
-                var id = GlobalObjectId.GetGlobalObjectIdSlow(toAdd);
-
-                if (id.identifierType != 2)
-                {
-                    avatarToAddToastElement = AvatarToAddToastElement.NonSceneElement;
-                    return;
-                }
-
-                ArrayUtility.Add(ref asset.avatars, new AvatarDescriptor()
-                {
-                    avatarDescriptor = new SceneReference(toAdd),
-                    name = ((VRCAvatarDescriptor)toAdd).gameObject.name,
-                    quest =
-                    {
-                        enabled = true,
-                        tagPrefix = "",
-                        tagSuffix = "",
-                        versionNamePrefix = "q",
-                    },
-                    windows =
-                    {
-                        enabled = true,
-                        tagPrefix = "",
-                        tagSuffix = "",
-                        versionNamePrefix = "v",
-                    },
-                });
-            }
-
-            switch (avatarToAddToastElement)
-            {
-                case AvatarToAddToastElement.None:
-                    break;
-                case AvatarToAddToastElement.NonSceneElement:
-                    EditorGUILayout.HelpBox("The avatar is not on the scene", MessageType.Error);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        enum AvatarToAddToastElement
-        {
-            None,
-            NonSceneElement,
-        }
-
-        private void PlatformSpecificInfo(string name, PlatformSpecificInfo info)
-        {
-            info.enabled = EditorGUILayout.ToggleLeft(name, info.enabled);
-
-            if (info.enabled)
-            {
-                info.tagPrefix = EditorGUILayout.TextField("Tag Prefix", info.tagPrefix);
-                info.tagSuffix = EditorGUILayout.TextField("Tag Suffix", info.tagSuffix);
-                info.versionNamePrefix = EditorGUILayout.TextField("Version Prefix", info.versionNamePrefix);
-            }
+            }));
+            return container;
         }
 
         private static void HorizontalLine(float regionHeight = 18f, float lineHeight = 1f)
