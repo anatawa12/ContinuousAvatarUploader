@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -80,12 +81,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
-        private void ContinueUpload()
+        private async void ContinueUpload()
         {
             for (; processingIndex < avatarDescriptors.Length; processingIndex++)
             {
                 // returns true means start upload successful.
-                if (Upload(avatarDescriptors[processingIndex]))
+                if (await Upload(avatarDescriptors[processingIndex]))
                     return;
             }
 
@@ -132,7 +133,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             uploadButton.OnPointerClick(new PointerEventData(EventSystem.current));
         }
 
-        public bool Upload(AvatarDescriptor avatar)
+        private async Task<bool> Upload(AvatarDescriptor avatar)
         {
             if (state != State.Idle)
                 throw new InvalidOperationException($"Don't start upload while {state}");
@@ -154,19 +155,34 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             Debug.Log($"Actual avatar name: {avatarDescriptor.name}");
 
-            var successful =
-                VRC.SDKBase.Editor.VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
-            if (successful)
+            state = State.Building;
+            uploadingAvatar = avatar;
+            try
             {
-                state = State.WaitingForUpload;
-                uploadingAvatar = avatar;
+                // wait a while to show updates on the window
+                await Task.Delay(100);
+
+                var successful =
+                    VRC.SDKBase.Editor.VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
+                if (successful)
+                {
+                    state = State.WaitingForUpload;
+                }
+
+                return successful;
             }
-            return successful;
+            catch
+            {
+                uploadingAvatar = null;
+                state = State.Idle;
+                throw;
+            }
         }
 
         enum State
         {
             Idle,
+            Building,
             WaitingForUpload,
             Uploading,
         }
