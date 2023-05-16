@@ -9,14 +9,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     [CreateAssetMenu]
     public class AvatarDescriptorSet : ScriptableObject
     {
-        public string[] definedTags = Array.Empty<string>();
         public AvatarDescriptor[] avatars = Array.Empty<AvatarDescriptor>();
     }
 
     [Serializable]
     public class AvatarDescriptor
     {
-        public string[] tags = Array.Empty<string>();
         public string name;
         public SceneReference avatarDescriptor;
         public PlatformSpecificInfo quest = new PlatformSpecificInfo();

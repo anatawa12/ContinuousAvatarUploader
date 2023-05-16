@@ -8,20 +8,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     [CustomEditor(typeof(AvatarDescriptorSet))]
     public class AvatarDescriptorSetEditor : UnityEditor.Editor
     {
-        private bool tagsDefinedOpened = true;
         private Vector2 positoon = new Vector2();
 
         public override void OnInspectorGUI()
         {
             var asset = (AvatarDescriptorSet)target;
             EditorGUI.BeginChangeCheck();
-
-            tagsDefinedOpened = EditorGUILayout.Foldout(tagsDefinedOpened, "Defined Tags");
-            if (tagsDefinedOpened)
-            {
-                using (new EditorGUI.IndentLevelScope())
-                    DefinedTagsList(asset);
-            }
 
             GUILayout.Label("Avatars");
 
@@ -36,34 +28,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         private string tagNamePrompt;
-
-        private void DefinedTagsList(AvatarDescriptorSet avatarDescriptorSet)
-        {
-            var removeButton = new GUIContent("x", "remove tag");
-            for (var i = 0; i < avatarDescriptorSet.definedTags.Length; i++)
-            {
-                var rect = EditorGUILayout.GetControlRect(true);
-                rect.width -= EditorGUIUtility.singleLineHeight + EditorGUIUtility.standardVerticalSpacing;
-                EditorGUI.LabelField(rect, $"Element {i}", avatarDescriptorSet.definedTags[i]);
-                rect.x += rect.width + EditorGUIUtility.standardVerticalSpacing;
-                rect.width = EditorGUIUtility.singleLineHeight;
-
-                if (GUI.Button(rect, removeButton))
-                {
-                    ArrayUtility.RemoveAt(ref avatarDescriptorSet.definedTags, i);
-                    return;
-                }
-            }
-
-            tagNamePrompt = EditorGUILayout.TextField($"Tag to Add", tagNamePrompt);
-
-            if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect(false)), "Add Tag"))
-            {
-                ArrayUtility.Add(ref avatarDescriptorSet.definedTags, tagNamePrompt);
-                tagNamePrompt = null;
-                return;
-            }
-        }
 
         private AvatarToAddToastElement avatarToAddToastElement;
         
