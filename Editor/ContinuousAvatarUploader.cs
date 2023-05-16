@@ -13,6 +13,11 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
+    /*
+     * Logic to trigger avatar build us based on Avatar Phalanx which is published under MIT license.
+     * https://gist.github.com/pimaker/02d0dafe7e424a6ac198e2442bb66ac7
+     * Copyright (c) 2022 @pimaker on GitHub
+     */
     public class ContinuousAvatarUploader : EditorWindow
     {
         [SerializeField] State state;
