@@ -74,7 +74,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     container.parent.Remove(container);
                     ArrayUtility.Remove(ref _asset.avatars, descriptor);
-                    EditorUtility.SetDirty(target);
+                    EditorUtility.SetDirty(_asset);
+                    DestroyImmediate(descriptor, true);
                 }
                 HorizontalLine();
             }));
