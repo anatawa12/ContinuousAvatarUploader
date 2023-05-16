@@ -8,8 +8,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     [CreateAssetMenu]
     public class AvatarDescriptorSet : ScriptableObject
     {
-        public string[] definedTags;
-        public AvatarDescriptor[] avatars;
+        public string[] definedTags = Array.Empty<string>();
+        public AvatarDescriptor[] avatars = Array.Empty<AvatarDescriptor>();
     }
 
     [Serializable]
