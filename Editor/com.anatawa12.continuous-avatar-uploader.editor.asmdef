@@ -1,6 +1,8 @@
 {
     "name": "com.anatawa12.continuous-avatar-uploader.editor",
-    "references": [],
+    "references": [
+        "GUID:a383f6f34a464d23aef9c3560c49d834"
+    ],
     "includePlatforms": [
         "Editor"
     ],
@@ -9,7 +11,8 @@
     "overrideReferences": true,
     "precompiledReferences": [
         "VRCSDK3A.dll",
-        "VRCSDKBase.dll"
+        "VRCSDKBase.dll",
+        "VRCSDKBase-Editor.dll"
     ],
     "autoReferenced": false,
     "defineConstraints": [],
