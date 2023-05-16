@@ -47,7 +47,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class PlatformSpecificInfo
     {
         public bool enabled;
-        public string branch;
         public string tagPrefix;
         public string tagSuffix;
         [Tooltip("prefix of version name on the description. for (v10), 'v' is the prefix.")]

@@ -101,7 +101,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     quest =
                     {
                         enabled = true,
-                        branch = "",
                         tagPrefix = "",
                         tagSuffix = "",
                         versionNamePrefix = "q",
@@ -109,7 +108,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     windows =
                     {
                         enabled = true,
-                        branch = "",
                         tagPrefix = "",
                         tagSuffix = "",
                         versionNamePrefix = "v",
@@ -141,7 +139,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             if (info.enabled)
             {
-                info.branch = EditorGUILayout.TextField("Branch", info.branch);
                 info.tagPrefix = EditorGUILayout.TextField("Tag Prefix", info.tagPrefix);
                 info.tagSuffix = EditorGUILayout.TextField("Tag Suffix", info.tagSuffix);
                 info.versionNamePrefix = EditorGUILayout.TextField("Version Prefix", info.versionNamePrefix);
