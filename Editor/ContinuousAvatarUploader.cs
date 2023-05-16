@@ -113,12 +113,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             var titleText = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Title Text")
                                       .GetComponent<Text>();
-            titleText.text = "Phalanx Upload!";
+            titleText.text = "Upload Avatar using Continuous Avatar Uploader!";
 
             await Task.Delay(2500);
-
-            // we're running baby!
-            //Debug.Log("Runtime Phalanx for " + AvatarName + " (" + AvatarId + ")");
 
             var nameField = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Avatar Info Panel/Settings Section/Name Input Field")
                                       .GetComponent<InputField>();
