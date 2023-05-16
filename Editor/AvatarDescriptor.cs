@@ -13,7 +13,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public SceneReference avatarDescriptor;
         public PlatformSpecificInfo quest = new PlatformSpecificInfo();
         public PlatformSpecificInfo windows = new PlatformSpecificInfo();
-        internal VRCAvatarDescriptor cachedAvatar;
     }
 
     [Serializable]
