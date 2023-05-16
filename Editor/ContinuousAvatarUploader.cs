@@ -15,6 +15,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [SerializeField] State state;
         [SerializeField] int processingIndex = -1;
         [SerializeField] AvatarDescriptor[] avatarDescriptors;
+        [SerializeField] AvatarDescriptor uploadingAvatar;
 
         private SerializedObject _serialized;
         private SerializedProperty _avatarDescriptor;
@@ -30,6 +31,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void OnGUI()
         {
+            if (uploadingAvatar)
+            {
+                GUILayout.Label("UPLOAD IN PROGRESS");
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Uploading ");
+                EditorGUILayout.ObjectField(uploadingAvatar, typeof(AvatarDescriptor), true);
+                GUILayout.EndHorizontal();
+            }
+            EditorGUI.BeginDisabledGroup(uploadingAvatar);
             _serialized.Update();
             EditorGUILayout.PropertyField(_avatarDescriptor);
             _serialized.ApplyModifiedProperties();
@@ -41,10 +51,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 if (GUILayout.Button("Start Upload"))
                 {
+                    processingIndex = 0;
                     ContinueUpload();
                     EditorUtility.SetDirty(this);
                 }
             }
+            EditorGUI.EndDisabledGroup();
         }
 
         private void Update()
@@ -59,13 +71,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (!EditorApplication.isPlaying && state == State.Uploading)
             {
                 state = State.Idle;
-                ContinueUpload();
+                uploadingAvatar = null;
+                if (processingIndex >= 0)
+                {
+                    processingIndex++;
+                    ContinueUpload();
+                }
             }
         }
 
         private void ContinueUpload()
         {
-            processingIndex++;
             for (; processingIndex < avatarDescriptors.Length; processingIndex++)
             {
                 // returns true means start upload successful.
@@ -122,6 +138,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 throw new InvalidOperationException($"Don't start upload while {state}");
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveOpenScenes();
+            Debug.Log($"Upload started for {avatar.name}");
 
             var avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
             if (!avatarDescriptor)
@@ -131,14 +148,19 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
             if (!avatarDescriptor)
             {
-                Debug.LogError("Upload failed", avatar);
+                Debug.LogError("Upload failed: avatar not found", avatar);
                 return false;
             }
+
+            Debug.Log($"Actual avatar name: {avatarDescriptor.name}");
 
             var successful =
                 VRC.SDKBase.Editor.VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
             if (successful)
+            {
                 state = State.WaitingForUpload;
+                uploadingAvatar = avatar;
+            }
             return successful;
         }
 
