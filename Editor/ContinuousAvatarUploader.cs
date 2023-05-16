@@ -6,7 +6,9 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using VRC.Core;
 using VRC.SDK3.Avatars.Components;
+using VRC.SDKBase.Editor;
 using Task = System.Threading.Tasks.Task;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
@@ -45,13 +47,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUILayout.PropertyField(_avatarDescriptor);
             _serialized.ApplyModifiedProperties();
 
+            var noDescriptors = avatarDescriptors.Length == 0;
             var anyNull = avatarDescriptors.Any(x => !x);
-            if (anyNull)
-                EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
-            if (!uploadingAvatar && EditorApplication.isPlayingOrWillChangePlaymode)
-                EditorGUILayout.HelpBox("To upload avatars, enter Play mode", MessageType.Error);
-            using (new EditorGUI.DisabledScope(avatarDescriptors.Length == 0 || anyNull
-                   || EditorApplication.isPlayingOrWillChangePlaymode))
+            var playMode = !uploadingAvatar && EditorApplication.isPlayingOrWillChangePlaymode;
+            var noCredentials = !APIUser.IsLoggedIn;
+            if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptor are specified", MessageType.Error);
+            if (anyNull) EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
+            if (playMode) EditorGUILayout.HelpBox("To upload avatars, exit Play mode", MessageType.Error);
+            if (noCredentials) EditorGUILayout.HelpBox("Please login in control panel", MessageType.Error);
+            using (new EditorGUI.DisabledScope(noDescriptors || anyNull || playMode || noCredentials))
             {
                 if (GUILayout.Button("Start Upload"))
                 {
@@ -165,8 +169,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 // wait a while to show updates on the window
                 await Task.Delay(100);
 
-                var successful =
-                    VRC.SDKBase.Editor.VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
+                var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
                 if (successful)
                 {
                     state = State.WaitingForUpload;
