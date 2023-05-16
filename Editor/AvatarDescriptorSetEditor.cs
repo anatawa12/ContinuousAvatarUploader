@@ -72,8 +72,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             for (var i = 0; i < asset.avatars.Length; i++)
             {
                 var avatar = asset.avatars[i];
-                EditorGUILayout.LabelField("Avatar", avatar.name);
-                EditorGUILayout.ObjectField("In scene", avatar.avatarDescriptor.scene, typeof(SceneAsset), false);
+                if (!avatar.cachedAvatar)
+                    avatar.cachedAvatar = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+                if (avatar.cachedAvatar)
+                {
+                    EditorGUILayout.ObjectField("Avatar", avatar.cachedAvatar, typeof(VRCAvatarDescriptor), false);
+                }
+                else
+                {
+                    EditorGUILayout.LabelField("Avatar", avatar.name);
+                    EditorGUILayout.ObjectField("In scene", avatar.avatarDescriptor.scene, typeof(SceneAsset), false);
+                }
                 PlatformSpecificInfo("PC Windows", avatar.windows);
                 PlatformSpecificInfo("Quest", avatar.quest);
                 HorizontalLine();

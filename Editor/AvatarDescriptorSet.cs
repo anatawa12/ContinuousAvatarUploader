@@ -1,6 +1,7 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using VRC.SDK3.Avatars.Components;
 using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
@@ -20,6 +21,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public SceneReference avatarDescriptor;
         public PlatformSpecificInfo quest = new PlatformSpecificInfo();
         public PlatformSpecificInfo windows = new PlatformSpecificInfo();
+        internal VRCAvatarDescriptor cachedAvatar;
     }
 
     [Serializable]
