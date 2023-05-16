@@ -48,7 +48,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var anyNull = avatarDescriptors.Any(x => !x);
             if (anyNull)
                 EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
-            using (new EditorGUI.DisabledScope(avatarDescriptors.Length == 0 || anyNull))
+            if (!uploadingAvatar && EditorApplication.isPlayingOrWillChangePlaymode)
+                EditorGUILayout.HelpBox("To upload avatars, enter Play mode", MessageType.Error);
+            using (new EditorGUI.DisabledScope(avatarDescriptors.Length == 0 || anyNull
+                   || EditorApplication.isPlayingOrWillChangePlaymode))
             {
                 if (GUILayout.Button("Start Upload"))
                 {
