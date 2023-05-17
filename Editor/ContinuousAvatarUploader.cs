@@ -28,10 +28,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [SerializeField] State state;
         [SerializeField] int processingIndex = -1;
         [SerializeField] AvatarDescriptor[] avatarDescriptors = Array.Empty<AvatarDescriptor>();
+        [SerializeField] AvatarDescriptorGroup[] groups = Array.Empty<AvatarDescriptorGroup>();
+
+        // for uploading avatars
+        [SerializeField] AvatarDescriptor[] uploadingAvatars = Array.Empty<AvatarDescriptor>();
         [SerializeField] AvatarDescriptor uploadingAvatar;
 
         private SerializedObject _serialized;
         private SerializedProperty _avatarDescriptor;
+        private SerializedProperty _groups;
 
         [MenuItem("Window/Continuous Avatar Uploader")]
         public static void OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
@@ -40,6 +45,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             _serialized = new SerializedObject(this);
             _avatarDescriptor = _serialized.FindProperty(nameof(avatarDescriptors));
+            _groups = _serialized.FindProperty(nameof(groups));
         }
 
         private void OnGUI()
@@ -55,20 +61,27 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUI.BeginDisabledGroup(uploadingAvatar);
             _serialized.Update();
             EditorGUILayout.PropertyField(_avatarDescriptor);
+            EditorGUILayout.PropertyField(_groups);
             _serialized.ApplyModifiedProperties();
 
-            var noDescriptors = avatarDescriptors.Length == 0;
+            var noDescriptors = avatarDescriptors.Length == 0 && groups.Length == 0;
             var anyNull = avatarDescriptors.Any(x => !x);
+            var anyGroupNull = groups.Any(x => !x);
             var playMode = !uploadingAvatar && EditorApplication.isPlayingOrWillChangePlaymode;
             var noCredentials = !APIUser.IsLoggedIn;
-            if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptor are specified", MessageType.Error);
+            if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptors are specified", MessageType.Error);
             if (anyNull) EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
+            if (anyGroupNull) EditorGUILayout.HelpBox("Some AvatarDescriptor Group is None", MessageType.Error);
             if (playMode) EditorGUILayout.HelpBox("To upload avatars, exit Play mode", MessageType.Error);
             if (noCredentials) EditorGUILayout.HelpBox("Please login in control panel", MessageType.Error);
-            using (new EditorGUI.DisabledScope(noDescriptors || anyNull || playMode || noCredentials))
+            using (new EditorGUI.DisabledScope(noDescriptors || anyNull || anyGroupNull || playMode || noCredentials))
             {
                 if (GUILayout.Button("Start Upload"))
                 {
+                    if (groups.Length == 0)
+                        uploadingAvatars = avatarDescriptors;
+                    else
+                        uploadingAvatars = avatarDescriptors.Concat(groups.SelectMany(x => x.avatars)).ToArray();
                     processingIndex = 0;
                     ContinueUpload();
                     EditorUtility.SetDirty(this);
@@ -100,15 +113,16 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private async void ContinueUpload()
         {
-            for (; processingIndex < avatarDescriptors.Length; processingIndex++)
+            for (; processingIndex < uploadingAvatars.Length; processingIndex++)
             {
                 // returns true means start upload successful.
-                if (await Upload(avatarDescriptors[processingIndex]))
+                if (await Upload(uploadingAvatars[processingIndex]))
                     return;
             }
 
             // done everything.
 
+            uploadingAvatars = Array.Empty<AvatarDescriptor>();
             processingIndex = -1;
         }
 
@@ -116,6 +130,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             if (state != State.Idle)
                 throw new InvalidOperationException($"Don't start upload while {state}");
+            if (avatar == null) return false;
             if (!avatar.GetCurrentPlatformInfo().enabled)
             {
                 Debug.LogWarning($"Skipping uploading {avatar} because it's disabled for current platform");
