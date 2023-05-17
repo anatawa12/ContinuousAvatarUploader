@@ -15,3 +15,41 @@
 2. VCCでContinuous Avatar Uploaderを追加する。
 
 [VCC-add-repo-link]: https://vpm.anatawa12.com/add-repo
+
+## 使い方
+
+### 1 アバターを設定する
+
+アップロードするアバターの設定を作ります。
+複数のアバターをまとめて`Avatar Descriptor Group`を作成することも、一つの`Avatar Descriptor`で一つのファイルにすることもできます。
+
+どちらを作成する場合もProjectウィンドウ内で右クリックから`Create/Avatar Descriptor`または`Create/Avatar Descriptor Group`を選択してください。
+
+`Avatar Descriptor`の場合はSet Avatarの欄にHierarchyからアバターをドラック&ドロップしてそのAvatar Descriptorに紐付けてください。
+
+`Avatar Descriptor Group`の場合はAvatar to Addの欄にHierarchyからアバターをドラック&ドロップしてAdd Avatarを押すことでアバターをAvatar Descriptor Groupに追加してください。
+
+次にそれそれのアバターの設定を行います。これはどちらでも共通です。
+
+<!-- override blueprintの設定欄の話は多分ここ -->
+
+２つのチェックボックスはそれぞれアバターを各プラットフォーム向けビルドでビルドするかを選択します。
+ここでチェックされていないアバターはアップロードされません。
+
+それぞれのプラットフォームごとにContinuous Avatar Uploaderの補助機能をon/offできます。
+
+#### Versioning System
+
+アバターの説明欄にアバターのバージョン番号を付加する機能です。カッコの中に接頭辞付きでバージョン番号を入れる想定です。
+
+#### git tagging
+
+Versioning Systemが有効なとき、gitのtagをバージョン番号をもとに自動的に付ける機能です。
+tagには自由な接頭辞/接尾辞を指定できます
+
+### 2 アップロードする
+
+1. `Window/Continuous Avatar Uploader`からContinuous Avatar Uploaderを開きます。
+2. Avatar DescriptorまたはAvatar Descriptor Groupを指定します。Groupを指定した場合、そのグループの中のすべてのアバターがアップロードされます。
+   Avatar Descriptor Groupの中の各アバターをAvatar Descriptorに指定することもできます。
+3. Start Uploadをクリックします。
