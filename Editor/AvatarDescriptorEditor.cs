@@ -72,8 +72,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             if (info.enabled)
             {
-                info.versionNamePrefix = EditorGUILayout.TextField("Version Prefix", info.versionNamePrefix);
-                GUILayout.Label($"'（{info.versionNamePrefix}<version>）'will be added in avatar description");
+                info.versionNameEnabled = EditorGUILayout.ToggleLeft("Update version name in Description", info.versionNameEnabled);
+                if (info.versionNameEnabled)
+                {
+                    info.versionNamePrefix = EditorGUILayout.TextField("Version Prefix", info.versionNamePrefix);
+                    GUILayout.Label($"'({info.versionNamePrefix}<version>)'will be added in avatar description");
+                }
+                info.gitEnabled = EditorGUILayout.ToggleLeft("git tagging", info.gitEnabled);
                 if (info.gitEnabled)
                 {
                     info.tagPrefix = EditorGUILayout.TextField("Tag Prefix", info.tagPrefix);
