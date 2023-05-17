@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     [CreateAssetMenu]
-    public class AvatarDescriptorSet : ScriptableObject
+    public class AvatarDescriptorGroup : ScriptableObject
     {
         public AvatarDescriptor[] avatars = Array.Empty<AvatarDescriptor>();
     }

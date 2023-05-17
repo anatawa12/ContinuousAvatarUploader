@@ -7,14 +7,14 @@ using Debug = System.Diagnostics.Debug;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
-    [CustomEditor(typeof(AvatarDescriptorSet))]
-    public class AvatarDescriptorSetEditor : UnityEditor.Editor
+    [CustomEditor(typeof(AvatarDescriptorGroup))]
+    public class AvatarDescriptorGroupEditor : UnityEditor.Editor
     {
-        private AvatarDescriptorSet _asset;
+        private AvatarDescriptorGroup _asset;
 
         public override VisualElement CreateInspectorGUI()
         {
-            _asset = (AvatarDescriptorSet)target;
+            _asset = (AvatarDescriptorGroup)target;
 
             var root = new VisualElement()
             {
