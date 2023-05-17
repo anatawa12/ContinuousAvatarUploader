@@ -133,9 +133,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             while (nameField.text == "")
                 await Task.Delay(2500);
 
-            var platformInfo = EditorUserBuildSettings.selectedBuildTargetGroup == BuildTargetGroup.Standalone
-                ? uploadingAvatar.windows
-                : uploadingAvatar.quest;
+            var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
 
             if (platformInfo.versioningEnabled)
             {
@@ -245,6 +243,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             if (state != State.Idle)
                 throw new InvalidOperationException($"Don't start upload while {state}");
+            if (!avatar.GetCurrentPlatformInfo().enabled)
+            {
+                Debug.LogWarning($"Skipping uploading {avatar} because it's disabled for current platform");
+                return false;
+            }
             AssetDatabase.SaveAssets();
             EditorSceneManager.SaveOpenScenes();
             Debug.Log($"Upload started for {avatar.name}");

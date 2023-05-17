@@ -19,6 +19,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             versionNamePrefix = "v"
         };
+
+        public PlatformSpecificInfo GetCurrentPlatformInfo() =>
+            EditorUserBuildSettings.selectedBuildTargetGroup == BuildTargetGroup.Standalone ? windows : quest;
     }
 
     [Serializable]
