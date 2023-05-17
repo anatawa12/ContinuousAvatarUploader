@@ -72,19 +72,25 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             if (info.enabled)
             {
-                info.versionNameEnabled = EditorGUILayout.ToggleLeft("Update version name in Description", info.versionNameEnabled);
-                if (info.versionNameEnabled)
+                EditorGUI.indentLevel++;
+                info.versioningEnabled = EditorGUILayout.ToggleLeft("Versioning System", info.versioningEnabled);
+                if (info.versioningEnabled)
                 {
+                    EditorGUI.indentLevel++;
                     info.versionNamePrefix = EditorGUILayout.TextField("Version Prefix", info.versionNamePrefix);
-                    GUILayout.Label($"'({info.versionNamePrefix}<version>)'will be added in avatar description");
+                    EditorGUILayout.LabelField($"'({info.versionNamePrefix}<version>)'will be added in avatar description");
+                    info.gitEnabled = EditorGUILayout.ToggleLeft("git tagging", info.gitEnabled);
+                    if (info.gitEnabled)
+                    {
+                        EditorGUI.indentLevel++;
+                        info.tagPrefix = EditorGUILayout.TextField("Tag Prefix", info.tagPrefix);
+                        info.tagSuffix = EditorGUILayout.TextField("Tag Suffix", info.tagSuffix);
+                        EditorGUILayout.LabelField($"tag name will be '{info.tagPrefix}<version>{info.tagSuffix}'");
+                        EditorGUI.indentLevel--;
+                    }
+                    EditorGUI.indentLevel--;
                 }
-                info.gitEnabled = EditorGUILayout.ToggleLeft("git tagging", info.gitEnabled);
-                if (info.gitEnabled)
-                {
-                    info.tagPrefix = EditorGUILayout.TextField("Tag Prefix", info.tagPrefix);
-                    info.tagSuffix = EditorGUILayout.TextField("Tag Suffix", info.tagSuffix);
-                    GUILayout.Label($"tag name will be '{info.tagPrefix}<version>{info.tagSuffix}'");
-                }
+                EditorGUI.indentLevel--;
             }
         }
 

@@ -137,7 +137,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 ? uploadingAvatar.windows
                 : uploadingAvatar.quest;
 
-            if (platformInfo.versionNameEnabled)
+            if (platformInfo.versioningEnabled)
             {
                 long versionName;
                 (descriptionField.text, versionName) =

@@ -1,6 +1,7 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
@@ -55,7 +56,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class PlatformSpecificInfo
     {
         public bool enabled;
-        public bool versionNameEnabled;
+        [FormerlySerializedAs("versionNameEnabled")] public bool versioningEnabled;
         public string versionNamePrefix = "";
         public bool gitEnabled;
         public string tagPrefix = "";
