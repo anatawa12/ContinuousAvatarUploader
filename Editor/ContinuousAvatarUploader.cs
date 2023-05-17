@@ -113,10 +113,24 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public async void StartUpload()
         {
-            await Task.Delay(1500);
+            Text titleText = null;
 
-            var titleText = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Title Text")
-                                      .GetComponent<Text>();
+            while (!titleText)
+            {
+                titleText = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Title Text")?.GetComponent<Text>();
+                await Task.Delay(100);
+            }
+
+            while (titleText.text == "New Avatar Creation")
+                await Task.Delay(100);
+
+            if (titleText.text == "New Avatar")
+            {
+                titleText.text = "New Avatar with Continuous Avatar Uploader";
+                return;
+            }
+
+            // New Avatar Creation
             titleText.text = "Upload Avatar using Continuous Avatar Uploader!";
 
             await Task.Delay(2500);
