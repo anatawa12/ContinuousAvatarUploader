@@ -112,6 +112,56 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             processingIndex = -1;
         }
 
+        private async Task<bool> Upload(AvatarDescriptor avatar)
+        {
+            if (state != State.Idle)
+                throw new InvalidOperationException($"Don't start upload while {state}");
+            if (!avatar.GetCurrentPlatformInfo().enabled)
+            {
+                Debug.LogWarning($"Skipping uploading {avatar} because it's disabled for current platform");
+                return false;
+            }
+            AssetDatabase.SaveAssets();
+            EditorSceneManager.SaveOpenScenes();
+            Debug.Log($"Upload started for {avatar.name}");
+
+            var avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+            if (!avatarDescriptor)
+            {
+                EditorSceneManager.OpenScene(AssetDatabase.GetAssetPath(avatar.avatarDescriptor.scene));
+                avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+            }
+            if (!avatarDescriptor)
+            {
+                Debug.LogError("Upload failed: avatar not found", avatar);
+                return false;
+            }
+
+            Debug.Log($"Actual avatar name: {avatarDescriptor.name}");
+
+            state = State.Building;
+            uploadingAvatar = avatar;
+            try
+            {
+                // wait a while to show updates on the window
+                await Task.Delay(100);
+
+                var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
+                if (successful)
+                {
+                    state = State.WaitingForUpload;
+                }
+
+                return successful;
+            }
+            catch
+            {
+                uploadingAvatar = null;
+                state = State.Idle;
+                throw;
+            }
+        }
+
         public async void StartUpload()
         {
             RuntimeBlueprintCreation creation = null;
@@ -243,56 +293,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 builder.Append('"');
 
                 return builder.ToString();
-            }
-        }
-
-        private async Task<bool> Upload(AvatarDescriptor avatar)
-        {
-            if (state != State.Idle)
-                throw new InvalidOperationException($"Don't start upload while {state}");
-            if (!avatar.GetCurrentPlatformInfo().enabled)
-            {
-                Debug.LogWarning($"Skipping uploading {avatar} because it's disabled for current platform");
-                return false;
-            }
-            AssetDatabase.SaveAssets();
-            EditorSceneManager.SaveOpenScenes();
-            Debug.Log($"Upload started for {avatar.name}");
-
-            var avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-            if (!avatarDescriptor)
-            {
-                EditorSceneManager.OpenScene(AssetDatabase.GetAssetPath(avatar.avatarDescriptor.scene));
-                avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-            }
-            if (!avatarDescriptor)
-            {
-                Debug.LogError("Upload failed: avatar not found", avatar);
-                return false;
-            }
-
-            Debug.Log($"Actual avatar name: {avatarDescriptor.name}");
-
-            state = State.Building;
-            uploadingAvatar = avatar;
-            try
-            {
-                // wait a while to show updates on the window
-                await Task.Delay(100);
-
-                var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
-                if (successful)
-                {
-                    state = State.WaitingForUpload;
-                }
-
-                return successful;
-            }
-            catch
-            {
-                uploadingAvatar = null;
-                state = State.Idle;
-                throw;
             }
         }
 
