@@ -12,6 +12,7 @@ using UnityEngine.UI;
 using VRC.Core;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor;
+using VRCSDK2;
 using Debug = UnityEngine.Debug;
 using Task = System.Threading.Tasks.Task;
 
@@ -113,13 +114,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public async void StartUpload()
         {
-            Text titleText = null;
+            RuntimeBlueprintCreation creation = null;
+            while (!creation)
+                creation = FindObjectOfType<RuntimeBlueprintCreation>();
 
-            while (!titleText)
-            {
-                titleText = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Title Text")?.GetComponent<Text>();
-                await Task.Delay(100);
-            }
+            var titleText = creation.titleText;
+            var descriptionField = creation.blueprintDescription;
+            var uploadButton = creation.uploadButton;
+            
+            // this is not referenced by RuntimeBlueprintCreation so use path-based
+            var warrantToggle = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Avatar Info Panel/Settings Section/Upload Section/ToggleWarrant")
+                .GetComponent<Toggle>();
 
             while (titleText.text == "New Avatar Creation")
                 await Task.Delay(100);
@@ -134,18 +139,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             titleText.text = "Upload Avatar using Continuous Avatar Uploader!";
 
             await Task.Delay(2500);
-
-            var nameField = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Avatar Info Panel/Settings Section/Name Input Field")
-                                      .GetComponent<InputField>();
-            var descriptionField = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Avatar Info Panel/Settings Section/DescriptionBackdrop/Description Input Field")
-                                             .GetComponent<InputField>();
-            var warrantToggle = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Avatar Info Panel/Settings Section/Upload Section/ToggleWarrant")
-                                          .GetComponent<Toggle>();
-            var uploadButton = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Avatar Info Panel/Settings Section/Upload Section/UploadButton")
-                                         .GetComponent<Button>();
-
-            while (nameField.text == "")
-                await Task.Delay(2500);
 
             var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
 

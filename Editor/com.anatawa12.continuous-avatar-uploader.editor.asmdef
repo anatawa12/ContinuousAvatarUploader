@@ -1,7 +1,8 @@
 {
     "name": "com.anatawa12.continuous-avatar-uploader.editor",
     "references": [
-        "GUID:a383f6f34a464d23aef9c3560c49d834"
+        "GUID:a383f6f34a464d23aef9c3560c49d834",
+        "GUID:3456780c4fb2d324ab9c633d6f1b0ddb"
     ],
     "includePlatforms": [
         "Editor"
