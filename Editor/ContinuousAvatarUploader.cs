@@ -33,6 +33,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         // for uploading avatars
         [SerializeField] AvatarDescriptor[] uploadingAvatars = Array.Empty<AvatarDescriptor>();
         [SerializeField] AvatarDescriptor uploadingAvatar;
+        [SerializeField] bool oldEnabled;
 
         private SerializedObject _serialized;
         private SerializedProperty _avatarDescriptor;
@@ -107,8 +108,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
             if (!EditorApplication.isPlaying && state == State.Uploading)
             {
-                state = State.Idle;
-                uploadingAvatar = null;
+                ResetUploadingAvatar();
                 if (processingIndex >= 0)
                 {
                     processingIndex++;
@@ -162,25 +162,38 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             state = State.Building;
             uploadingAvatar = avatar;
+            oldEnabled = avatarDescriptor.gameObject.activeSelf;
+            avatarDescriptor.gameObject.SetActive(true);
+
             try
             {
                 // wait a while to show updates on the window
                 await Task.Delay(100);
 
                 var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
-                if (successful)
-                {
-                    state = State.WaitingForUpload;
-                }
+                state = State.WaitingForUpload;
+                if (!successful)
+                    ResetUploadingAvatar(avatarDescriptor);
 
                 return successful;
             }
             catch
             {
-                uploadingAvatar = null;
-                state = State.Idle;
+                ResetUploadingAvatar(avatarDescriptor);
                 throw;
             }
+        }
+
+        private void ResetUploadingAvatar(VRCAvatarDescriptor avatarDescriptor = null)
+        {
+            if (!avatarDescriptor)
+                avatarDescriptor = uploadingAvatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+
+            if (avatarDescriptor)
+                avatarDescriptor.gameObject.gameObject.SetActive(oldEnabled);
+
+            uploadingAvatar = null;
+            state = State.Idle;
         }
 
         public async void StartUpload()
