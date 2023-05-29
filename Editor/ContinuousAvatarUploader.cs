@@ -187,7 +187,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             RuntimeBlueprintCreation creation = null;
             while (!creation)
+            {
                 creation = FindObjectOfType<RuntimeBlueprintCreation>();
+                await Task.Delay(10);
+            }
 
             var titleText = creation.titleText;
             var descriptionField = creation.blueprintDescription;
