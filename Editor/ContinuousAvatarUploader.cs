@@ -46,6 +46,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _serialized = new SerializedObject(this);
             _avatarDescriptor = _serialized.FindProperty(nameof(avatarDescriptors));
             _groups = _serialized.FindProperty(nameof(groups));
+            EditorApplication.update += OnUpdate;
+        }
+
+        private void OnDisable()
+        {
+            EditorApplication.update -= OnUpdate;
         }
 
         private void OnGUI()
@@ -90,7 +96,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUI.EndDisabledGroup();
         }
 
-        private void Update()
+        private void OnUpdate()
         {
             if (state == State.Idle) return;
 
