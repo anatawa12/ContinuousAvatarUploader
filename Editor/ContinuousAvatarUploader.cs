@@ -185,6 +185,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [SerializeField] int sleepMilliseconds;
 
         // LOCAL VARIABLES
+        [SerializeField] string[] lastOpenedScenes;
         [SerializeField] int processingIndex = -1;
         [SerializeField] AvatarUploadSetting uploadingAvatar;
         [SerializeField] bool oldEnabled;
@@ -213,9 +214,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     if (EditorApplication.isPlaying) return state;
                     AssetDatabase.SaveAssets();
-                    if (Enumerable.Range(0, SceneManager.sceneCount)
-                        .Any(x => SceneManager.GetSceneAt(x).isDirty))
+                    var scenes = Enumerable.Range(0, SceneManager.sceneCount).Select(SceneManager.GetSceneAt).ToArray();
+                    if (scenes.Any(x => x.isDirty))
                         EditorSceneManager.SaveOpenScenes();
+                    var scenePaths = scenes.Select(x => x.path).ToArray();
+                    lastOpenedScenes = scenePaths.Any(string.IsNullOrEmpty) ? Array.Empty<string>() : scenePaths;
 
                     processingIndex = 0;
                     goto case State.StartingUploadAvatar;
@@ -383,7 +386,16 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 case State.FinishContinuousUpload:
                     if (EditorApplication.isPlaying) return state;
-                    EditorSceneManager.NewScene(NewSceneSetup.EmptyScene); // without saving anything
+                    if (lastOpenedScenes.Length == 0)
+                    {
+                        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+                    }
+                    else
+                    {
+                        EditorSceneManager.OpenScene(lastOpenedScenes[0]);
+                        foreach (var lastOpenedScene in lastOpenedScenes.Skip(1))
+                            EditorSceneManager.OpenScene(lastOpenedScene, OpenSceneMode.Additive);
+                    }
                     AssetDatabase.DeleteAsset(PrefabScenePath);
                     return State.Idle;
                 default:
