@@ -20,6 +20,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         [SerializeField] AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
         [SerializeField] AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
+
         [Tooltip("The time sleeps between upload")] [SerializeField]
         public float sleepSeconds = 3;
 
@@ -81,7 +82,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var anyNull = avatarSettings.Any(x => !x);
             var anyGroupNull = groups.Any(x => !x);
             var playMode = !uploadInProgress && EditorApplication.isPlayingOrWillChangePlaymode;
-            var noCredentials = !APIUser.IsLoggedIn;
+            var noCredentials = !VerifyCredentials(Repaint);
             if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptors are specified", MessageType.Error);
             if (anyNull) EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
             if (anyGroupNull) EditorGUILayout.HelpBox("Some AvatarDescriptor Group is None", MessageType.Error);
@@ -94,12 +95,28 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     var uploadingAvatars = groups.Length == 0
                         ? avatarSettings
                         : avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
-                    process.StartContinuousUpload((int) (sleepSeconds * 1000), uploadingAvatars);
+                    process.StartContinuousUpload((int)(sleepSeconds * 1000), uploadingAvatars);
                     EditorUtility.SetDirty(this);
                 }
             }
 
             EditorGUI.EndDisabledGroup();
+        }
+
+        public static bool VerifyCredentials(Action onSuccess = null)
+        {
+            if (!ConfigManager.RemoteConfig.IsInitialized())
+            {
+                API.SetOnlineMode(true, "vrchat");
+                ConfigManager.RemoteConfig.Init();
+            }
+            if (!APIUser.IsLoggedIn && ApiCredentials.Load())
+                APIUser.InitialFetchCurrentUser(c =>
+                {
+                    AnalyticsSDK.LoggedInUserChanged(c.Model as APIUser);
+                    onSuccess?.Invoke();
+                }, null);
+            return APIUser.IsLoggedIn;
         }
     }
 
@@ -339,6 +356,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                     return Sleep(2500, State.ConfigurationSceneSleeping2500);
                 }
+                case State.ConfigurationSceneSleeping2500: return state;
                 case State.ConfigurationSceneSlept2500:
                 {
                     if (!EditorApplication.isPlaying) return State.WaitingUploadFinish; // Abort current avatar.
@@ -401,6 +419,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         foreach (var lastOpenedScene in lastOpenedScenes.Skip(1))
                             EditorSceneManager.OpenScene(lastOpenedScene, OpenSceneMode.Additive);
                     }
+
                     AssetDatabase.DeleteAsset(PrefabScenePath);
                     return State.Idle;
                 default:
