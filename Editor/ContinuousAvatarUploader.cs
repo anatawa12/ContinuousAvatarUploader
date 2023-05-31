@@ -217,6 +217,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 // wait a while to show updates on the window
                 await Task.Delay(100);
                 if (state != State.Building) return false; // aborted
+                
+                // pipelineManager.AssignId() doesn't mark pipeline manager dirty
+                var pipelineManager = avatarDescriptor.gameObject.GetComponent<PipelineManager>();
+                if (pipelineManager && string.IsNullOrEmpty(pipelineManager.blueprintId))
+                {
+                    pipelineManager.AssignId();
+                    EditorUtility.SetDirty(pipelineManager);
+                }
 
                 var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
                 state = State.WaitingForUpload;
