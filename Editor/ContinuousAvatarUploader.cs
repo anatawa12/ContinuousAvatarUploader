@@ -184,6 +184,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             StartingUploadAvatar,
             StartingUploadAvatarSleeping,
             StartingUploadAvatarSlept,
+            StartingUploadAvatarWaitingLogin = StartingUploadAvatarSlept,
 
             ContinueToNextAvatar,
 
@@ -291,9 +292,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     return Sleep(100, State.StartingUploadAvatarSleeping);
                 }
                 case State.StartingUploadAvatarSleeping: return state;
-                case State.StartingUploadAvatarSlept:
+                case State.StartingUploadAvatarWaitingLogin:
                 {
                     if (EditorApplication.isPlaying) return state;
+                    if (!ContinuousAvatarUploader.VerifyCredentials()) return state;
+                    
                     // pipelineManager.AssignId() doesn't mark pipeline manager dirty
                     var pipelineManager = avatarDescriptor.gameObject.GetComponent<PipelineManager>();
                     if (pipelineManager && string.IsNullOrEmpty(pipelineManager.blueprintId))
