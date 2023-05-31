@@ -311,7 +311,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             var titleText = creation.titleText;
             var descriptionField = creation.blueprintDescription;
-            var uploadButton = creation.uploadButton;
+            var shouldUpdateImageToggle = creation.shouldUpdateImageToggle;
 
             while (titleText.text == "New Avatar Creation")
                 await Delay(100);
@@ -325,9 +325,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // New Avatar Creation
             titleText.text = "Upload Avatar using Continuous Avatar Uploader!";
 
+            var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
+            shouldUpdateImageToggle.isOn = platformInfo.updateImage;            
+
             await Delay(2500);
 
-            var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
 
             if (platformInfo.versioningEnabled)
             {

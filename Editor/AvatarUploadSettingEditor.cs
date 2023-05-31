@@ -1,6 +1,13 @@
+using System;
+using JetBrains.Annotations;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using VRC.SDK3.Avatars.Components;
+using Object = UnityEngine.Object;
+
+// ReSharper disable AccessToStaticMemberViaDerivedType
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
@@ -9,6 +16,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         private VRCAvatarDescriptor _cachedAvatar;
         private bool _settingAvatar;
+        [CanBeNull] private PreviewCameraManager _previewCameraManager;
 
         public override void OnInspectorGUI()
         {
@@ -19,6 +27,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             if (EditorGUI.EndChangeCheck())
                 EditorUtility.SetDirty(asset);
+        }
+
+        private void OnDisable()
+        {
+            if (_previewCameraManager != null)
+            {
+                _previewCameraManager.Finish();
+                _previewCameraManager = null;
+            }
         }
 
         private void AvatarDescriptors(AvatarUploadSetting avatar)
@@ -73,6 +90,35 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (info.enabled)
             {
                 EditorGUI.indentLevel++;
+                info.updateImage = EditorGUILayout.ToggleLeft("update Image", info.updateImage);
+                if (info.updateImage)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUI.BeginDisabledGroup(!_cachedAvatar);
+                    if (_previewCameraManager != null)
+                    {
+                        _previewCameraManager.DrawPreview();
+                        if (IndentedButton("Finish Setting Camera Position"))
+                        {
+                            _previewCameraManager?.Finish();
+                            _previewCameraManager = null;
+                        }
+                    }
+                    else
+                    {
+                        if (IndentedButton("Configure Camera Position"))
+                        {
+                            _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar);
+                        }
+                    }
+                    EditorGUI.EndDisabledGroup();
+                    EditorGUI.indentLevel--;
+                }
+                else
+                {
+                    _previewCameraManager?.Finish();
+                    _previewCameraManager = null;
+                }
                 info.versioningEnabled = EditorGUILayout.ToggleLeft("Versioning System", info.versioningEnabled);
                 if (info.versioningEnabled)
                 {
@@ -100,6 +146,105 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             rect.y += (rect.height - lineHeight) / 2;
             rect.height = lineHeight;
             EditorGUI.DrawRect(rect, new Color(0.5f, 0.5f, 0.5f, 1));
+        }
+
+        private static bool IndentedButton(string text, params GUILayoutOption[] options)
+        {
+            var content = new GUIContent(text);
+            var rect = EditorGUI.IndentedRect(GUILayoutUtility.GetRect(content, GUI.skin.button, options));
+            return GUI.Button(rect, content);
+        }
+    }
+
+    sealed class PreviewCameraManager
+    {
+        private Camera _camera;
+        private bool _prevLocked;
+        private readonly VRCAvatarDescriptor _cachedAvatar;
+        private readonly UnityEditor.Editor _editor;
+
+        public PreviewCameraManager([NotNull] UnityEditor.Editor editor,
+            [NotNull] VRCAvatarDescriptor cachedAvatar)
+        {
+            if (editor == null) throw new ArgumentNullException(nameof(editor));
+            if (cachedAvatar == null) throw new ArgumentNullException(nameof(cachedAvatar));
+            _editor = editor;
+            _cachedAvatar = cachedAvatar;
+
+            _prevLocked = ActiveEditorTracker.sharedTracker.isLocked;
+            ActiveEditorTracker.sharedTracker.isLocked = true;
+
+            _camera = EditorUtility.CreateGameObjectWithHideFlags("VRCCam Shim Camera", HideFlags.DontSave,
+                    typeof(Camera))
+                .GetComponent<Camera>();
+            _camera.enabled = false;
+            _camera.cullingMask = unchecked((int)0xFFFFFFDF);
+            _camera.nearClipPlane = 0.01f;
+            _camera.farClipPlane = 100f;
+            _camera.allowHDR = false;
+            _camera.scene = cachedAvatar.gameObject.scene;
+            cachedAvatar.PositionPortraitCamera(_camera.transform);
+            EditorApplication.update += OnUpdate;
+        }
+
+        private Vector3 _cameraPositionOld;
+        private Quaternion _cameraRotationOld;
+        private void OnUpdate()
+        {
+            var transform = _camera.transform;
+            if (_cameraPositionOld != transform.position || _cameraRotationOld != transform.rotation)
+                _editor.Repaint();
+            _cameraPositionOld = transform.position;
+            _cameraRotationOld = transform.rotation;
+        }
+
+        public void DrawPreview(params GUILayoutOption[] options)
+        {
+            var cameraRect = GUILayoutUtility.GetAspectRect(16.0f / 9f, options);
+            if (Event.current.type == EventType.Repaint)
+            {
+                var previewTexture = GetRenderTexture((int)cameraRect.width, (int)cameraRect.height);
+                _camera.targetTexture = previewTexture;
+                _camera.pixelRect = new Rect(0, 0, cameraRect.width, cameraRect.height);
+                _camera.Render();
+                Graphics.DrawTexture(cameraRect, previewTexture, new Rect(0, 0, 1, 1), 
+                    0, 0, 0, 0, GUI.color);
+            }
+        }
+
+        private RenderTexture _previewTexture;
+
+        private RenderTexture GetRenderTexture(int width, int height)
+        {
+            int antiAliasing = Mathf.Max(1, QualitySettings.antiAliasing);
+            if (_previewTexture == null || _previewTexture.width != width || _previewTexture.height != height || _previewTexture.antiAliasing != antiAliasing)
+            {
+                _previewTexture = new RenderTexture(width, height, 24, SystemInfo.GetGraphicsFormat(DefaultFormat.LDR));
+                _previewTexture.antiAliasing = antiAliasing;
+            }
+            return _previewTexture;
+        }
+
+        public void Finish()
+        {
+            if (!_camera) return;
+
+            EditorApplication.update -= OnUpdate;
+            if (_cachedAvatar)
+            {
+                var transform = _cachedAvatar.transform;
+                _cachedAvatar.portraitCameraPositionOffset =
+                    transform.InverseTransformPoint(_camera.transform.position);
+                _cachedAvatar.portraitCameraRotationOffset =
+                    Quaternion.Inverse(transform.rotation) * _camera.transform.rotation;
+                // k = x * y
+                // ^x * k = ^x * x * y
+                // ^x * k = y
+            }
+
+            Object.DestroyImmediate(_camera.gameObject);
+            _camera = null;
+            ActiveEditorTracker.sharedTracker.isLocked = _prevLocked;
         }
     }
 }

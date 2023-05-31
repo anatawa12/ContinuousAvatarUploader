@@ -87,6 +87,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class PlatformSpecificInfo
     {
         public bool enabled;
+        public bool updateImage;
         [FormerlySerializedAs("versionNameEnabled")] public bool versioningEnabled;
         public string versionNamePrefix = "";
         public bool gitEnabled;
