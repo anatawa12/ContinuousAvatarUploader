@@ -145,10 +145,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var oldState = state;
             state = OnUpdateImpl(oldState);
             if (state != oldState)
-            {
                 Repaint?.Invoke();
-                state = oldState;
-            }
         }
 
         private const string PrefabScenePath = "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity";
