@@ -243,6 +243,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     transform.InverseTransformPoint(_camera.transform.position);
                 _cachedAvatar.portraitCameraRotationOffset =
                     Quaternion.Inverse(transform.rotation) * _camera.transform.rotation;
+                EditorUtility.SetDirty(_cachedAvatar);
                 // k = x * y
                 // ^x * k = ^x * x * y
                 // ^x * k = y
