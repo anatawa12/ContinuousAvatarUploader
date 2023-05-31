@@ -312,10 +312,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var titleText = creation.titleText;
             var descriptionField = creation.blueprintDescription;
             var uploadButton = creation.uploadButton;
-            
-            // this is not referenced by RuntimeBlueprintCreation so use path-based
-            var warrantToggle = GameObject.Find("VRCSDK/UI/Canvas/AvatarPanel/Avatar Info Panel/Settings Section/Upload Section/ToggleWarrant")
-                .GetComponent<Toggle>();
 
             while (titleText.text == "New Avatar Creation")
                 await Delay(100);
@@ -345,14 +341,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
             }
 
-            warrantToggle.isOn = true;
-
             EditorPatcher.Patcher.DisplayDialog += args =>
             {
                 if (args.Title == "VRChat SDK") args.Result = true;
             };
 
-            uploadButton.OnPointerClick(new PointerEventData(EventSystem.current));
+            creation.SetupUpload();
         }
 
         private (string, long) UpdateVersionName(string description, string versionPrefix)
