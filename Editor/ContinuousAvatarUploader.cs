@@ -74,6 +74,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     GUILayout.Label("Sleeping a little");
                 }
+
+                if (GUILayout.Button("ABORT UPLOAD"))
+                    state = State.Aborting;
             }
             EditorGUI.BeginDisabledGroup(uploadInProgress);
             _serialized.Update();
@@ -124,6 +127,24 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     ContinueUpload();
                 }
             }
+
+            if (state == State.Aborting)
+            {
+                if (EditorApplication.isPlaying)
+                {
+                    EditorApplication.isPlaying = false;
+                }
+                else
+                {
+                    uploadingAvatars = Array.Empty<AvatarDescriptor>();
+                    processingIndex = -1;
+                    sleeping = false;
+                    if (uploadingAvatar)
+                        ResetUploadingAvatar();
+                    else
+                        state = State.Idle;
+                }
+            }
         }
 
         private async void StartContinuousUpload()
@@ -137,6 +158,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             sleeping = true;
             await Task.Delay((int)(sleepSeconds * 1000));
             if (!sleeping) return; // aborted.
+            sleeping = false;
             processingIndex++;
             await UploadNext();
         }
@@ -148,6 +170,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 // returns true means start upload successful.
                 if (await Upload(uploadingAvatars[processingIndex]))
                     return;
+                if (state == State.Aborting) return;
             }
 
             // done everything.
@@ -193,6 +216,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 // wait a while to show updates on the window
                 await Task.Delay(100);
+                if (state != State.Building) return false; // aborted
 
                 var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
                 state = State.WaitingForUpload;
@@ -383,6 +407,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             Building,
             WaitingForUpload,
             Uploading,
+            Aborting,
         }
     }
 }
