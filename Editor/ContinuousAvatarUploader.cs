@@ -392,12 +392,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 case State.WaitingUploadFinish:
                 {
                     if (EditorApplication.isPlaying) return state;
+                    if (!avatarDescriptor)
+                        avatarDescriptor = uploadingAvatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+
                     if (uploadingAvatar.avatarDescriptor.IsAssetReference())
                     {
                         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene); // without saving anything
                         AssetDatabase.DeleteAsset(PrefabScenePath);
                     }
-                    else
+                    else if (avatarDescriptor)
                     {
                         avatarDescriptor.gameObject.gameObject.SetActive(oldEnabled);
                     }
