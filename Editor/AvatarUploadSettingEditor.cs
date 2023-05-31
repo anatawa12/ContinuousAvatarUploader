@@ -95,7 +95,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (info.updateImage)
                 {
                     EditorGUI.indentLevel++;
-                    EditorGUI.BeginDisabledGroup(!_cachedAvatar);
+                    EditorGUI.BeginDisabledGroup(!_cachedAvatar || !_cachedAvatar.gameObject.scene.IsValid());
                     if (_previewCameraManager != null)
                     {
                         _previewCameraManager.DrawPreview();
