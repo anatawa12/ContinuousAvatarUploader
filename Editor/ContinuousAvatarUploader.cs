@@ -7,36 +7,23 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.UI;
 using VRC.Core;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor;
 using VRCSDK2;
 using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 using Task = System.Threading.Tasks.Task;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
-    /*
-     * Logic to trigger avatar build us based on Avatar Phalanx which is published under MIT license.
-     * https://gist.github.com/pimaker/02d0dafe7e424a6ac198e2442bb66ac7
-     * Copyright (c) 2022 @pimaker on GitHub
-     */
     public class ContinuousAvatarUploader : EditorWindow
     {
-        [SerializeField] State state;
         [SerializeField] AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
         [SerializeField] AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
-        [Tooltip("The time sleeps between upload")]
-        [SerializeField] float sleepSeconds = 3;
 
         // for uploading avatars
-        [SerializeField] int processingIndex = -1;
-        [SerializeField] AvatarUploadSetting[] uploadingAvatars = Array.Empty<AvatarUploadSetting>();
-        [SerializeField] AvatarUploadSetting uploadingAvatar;
-        [SerializeField] bool oldEnabled;
-        [SerializeField] bool sleeping;
+        [SerializeField] private UploadProcess process = new UploadProcess();
 
         private SerializedObject _serialized;
         private SerializedProperty _avatarDescriptor;
@@ -51,24 +38,24 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _serialized = new SerializedObject(this);
             _avatarDescriptor = _serialized.FindProperty(nameof(avatarSettings));
             _groups = _serialized.FindProperty(nameof(groups));
-            _sleepSeconds = _serialized.FindProperty(nameof(sleepSeconds));
-            EditorApplication.update += OnUpdate;
+            _sleepSeconds = _serialized.FindProperty(nameof(process) + '.' + nameof(process.sleepSeconds));
+            process.OnEnable();
         }
 
         private void OnDisable()
         {
-            EditorApplication.update -= OnUpdate;
+            process.OnDisable();
         }
 
         private void OnGUI()
         {
-            var uploadInProgress = uploadingAvatar || sleeping;
+            var uploadInProgress = process.IsInProgress();
             if (uploadInProgress)
             {
                 GUILayout.Label("UPLOAD IN PROGRESS");
-                if (uploadingAvatar)
+                if (process.UploadingAvatar)
                 {
-                    EditorGUILayout.ObjectField("Uploading", uploadingAvatar, typeof(AvatarUploadSetting), true);
+                    EditorGUILayout.ObjectField("Uploading", process.UploadingAvatar, typeof(AvatarUploadSetting), true);
                 }
                 else
                 {
@@ -76,7 +63,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
 
                 if (GUILayout.Button("ABORT UPLOAD"))
-                    state = State.Aborting;
+                    process.Abort();
             }
             EditorGUI.BeginDisabledGroup(uploadInProgress);
             _serialized.Update();
@@ -88,7 +75,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var noDescriptors = avatarSettings.Length == 0 && groups.Length == 0;
             var anyNull = avatarSettings.Any(x => !x);
             var anyGroupNull = groups.Any(x => !x);
-            var playMode = !uploadingAvatar && EditorApplication.isPlayingOrWillChangePlaymode;
+            var playMode = !uploadInProgress && EditorApplication.isPlayingOrWillChangePlaymode;
             var noCredentials = !APIUser.IsLoggedIn;
             if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptors are specified", MessageType.Error);
             if (anyNull) EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
@@ -99,15 +86,58 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 if (GUILayout.Button("Start Upload"))
                 {
-                    if (groups.Length == 0)
-                        uploadingAvatars = avatarSettings;
-                    else
-                        uploadingAvatars = avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
-                    StartContinuousUpload();
+                    var uploadingAvatars = groups.Length == 0 ? avatarSettings : avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
+                    process.StartContinuousUpload(uploadingAvatars);
                     EditorUtility.SetDirty(this);
                 }
             }
             EditorGUI.EndDisabledGroup();
+        }
+    }
+    
+    /*
+     * Logic to trigger avatar build us based on Avatar Phalanx which is published under MIT license.
+     * https://gist.github.com/pimaker/02d0dafe7e424a6ac198e2442bb66ac7
+     * Copyright (c) 2022 @pimaker on GitHub
+     */
+    [Serializable]
+    sealed class UploadProcess
+    {
+        [SerializeField] State state;
+        [Tooltip("The time sleeps between upload")]
+        [SerializeField] public float sleepSeconds = 3;
+
+        // for uploading avatars
+        [SerializeField] int processingIndex = -1;
+        [SerializeField] AvatarUploadSetting[] uploadingAvatars = Array.Empty<AvatarUploadSetting>();
+        [SerializeField] AvatarUploadSetting uploadingAvatar;
+        [SerializeField] bool oldEnabled;
+        [SerializeField] bool sleeping;
+
+        public AvatarUploadSetting UploadingAvatar => uploadingAvatar;
+
+        public bool IsInProgress() => state != State.Idle;
+
+        public void Abort()
+        {
+            state = State.Aborting;
+        }
+
+        public async void StartContinuousUpload(AvatarUploadSetting[] avatars)
+        {
+            uploadingAvatars = avatars;
+            processingIndex = 0;
+            await UploadNext();
+        }
+
+        public void OnEnable()
+        {
+            EditorApplication.update += OnUpdate;
+        }
+
+        public void OnDisable()
+        {
+            EditorApplication.update -= OnUpdate;
         }
 
         private void OnUpdate()
@@ -145,12 +175,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         state = State.Idle;
                 }
             }
-        }
-
-        private async void StartContinuousUpload()
-        {
-            processingIndex = 0;
-            await UploadNext();
         }
 
         private async void ContinueUpload()
@@ -203,7 +227,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (avatarDescriptor)
                 {
                     var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
-                    var newGameObject = Instantiate(avatarDescriptor.gameObject);
+                    var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
                     avatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
                     EditorSceneManager.SaveScene(scene, PrefabScenePath);
                 }
@@ -305,7 +329,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             RuntimeBlueprintCreation creation = null;
             while (!creation)
             {
-                creation = FindObjectOfType<RuntimeBlueprintCreation>();
+                creation = Object.FindObjectOfType<RuntimeBlueprintCreation>();
                 await Delay(10);
             }
 
