@@ -3,17 +3,16 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using VRC.Core;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor;
 using VRCSDK2;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
-using Task = System.Threading.Tasks.Task;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
@@ -40,10 +39,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _groups = _serialized.FindProperty(nameof(groups));
             _sleepSeconds = _serialized.FindProperty(nameof(process) + '.' + nameof(process.sleepSeconds));
             process.OnEnable();
+            process.Repaint += Repaint;
         }
 
         private void OnDisable()
         {
+            process.Repaint -= Repaint;
             process.OnDisable();
         }
 
@@ -55,7 +56,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 GUILayout.Label("UPLOAD IN PROGRESS");
                 if (process.UploadingAvatar)
                 {
-                    EditorGUILayout.ObjectField("Uploading", process.UploadingAvatar, typeof(AvatarUploadSetting), true);
+                    EditorGUILayout.ObjectField("Uploading", process.UploadingAvatar, typeof(AvatarUploadSetting),
+                        true);
                 }
                 else
                 {
@@ -65,6 +67,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (GUILayout.Button("ABORT UPLOAD"))
                     process.Abort();
             }
+
             EditorGUI.BeginDisabledGroup(uploadInProgress);
             _serialized.Update();
             EditorGUILayout.PropertyField(_avatarDescriptor);
@@ -86,15 +89,18 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 if (GUILayout.Button("Start Upload"))
                 {
-                    var uploadingAvatars = groups.Length == 0 ? avatarSettings : avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
+                    var uploadingAvatars = groups.Length == 0
+                        ? avatarSettings
+                        : avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
                     process.StartContinuousUpload(uploadingAvatars);
                     EditorUtility.SetDirty(this);
                 }
             }
+
             EditorGUI.EndDisabledGroup();
         }
     }
-    
+
     /*
      * Logic to trigger avatar build us based on Avatar Phalanx which is published under MIT license.
      * https://gist.github.com/pimaker/02d0dafe7e424a6ac198e2442bb66ac7
@@ -104,15 +110,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     sealed class UploadProcess
     {
         [SerializeField] State state;
-        [Tooltip("The time sleeps between upload")]
-        [SerializeField] public float sleepSeconds = 3;
 
-        // for uploading avatars
-        [SerializeField] int processingIndex = -1;
-        [SerializeField] AvatarUploadSetting[] uploadingAvatars = Array.Empty<AvatarUploadSetting>();
-        [SerializeField] AvatarUploadSetting uploadingAvatar;
-        [SerializeField] bool oldEnabled;
-        [SerializeField] bool sleeping;
+        [Tooltip("The time sleeps between upload")] [SerializeField]
+        public float sleepSeconds = 3;
+
+        public event Action Repaint;
 
         public AvatarUploadSetting UploadingAvatar => uploadingAvatar;
 
@@ -120,14 +122,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public void Abort()
         {
-            state = State.Aborting;
+            state = State.Abort;
         }
 
-        public async void StartContinuousUpload(AvatarUploadSetting[] avatars)
+        public void StartContinuousUpload(AvatarUploadSetting[] avatars)
         {
+            if (state != State.Idle) throw new InvalidOperationException("Cannot start upload in non idle state");
             uploadingAvatars = avatars;
-            processingIndex = 0;
-            await UploadNext();
+            state = State.StartingContinuousUpload;
         }
 
         public void OnEnable()
@@ -142,237 +144,264 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void OnUpdate()
         {
-            if (state == State.Idle) return;
-
-            if (EditorApplication.isPlaying && state == State.WaitingForUpload)
+            var oldState = state;
+            state = OnUpdateImpl(oldState);
+            if (state != oldState)
             {
-                state = State.Uploading;
-                ConfigureSdkDisplayAndUpload();
+                Repaint?.Invoke();
+                state = oldState;
             }
-            if (!EditorApplication.isPlaying && state == State.Uploading)
-            {
-                ResetUploadingAvatar();
-                if (processingIndex >= 0)
-                {
-                    ContinueUpload();
-                }
-            }
-
-            if (state == State.Aborting)
-            {
-                if (EditorApplication.isPlaying)
-                {
-                    EditorApplication.isPlaying = false;
-                }
-                else
-                {
-                    uploadingAvatars = Array.Empty<AvatarUploadSetting>();
-                    processingIndex = -1;
-                    sleeping = false;
-                    if (uploadingAvatar)
-                        ResetUploadingAvatar();
-                    else
-                        state = State.Idle;
-                }
-            }
-        }
-
-        private async void ContinueUpload()
-        {
-            sleeping = true;
-            await Task.Delay((int)(sleepSeconds * 1000));
-            if (!sleeping) return; // aborted.
-            sleeping = false;
-            processingIndex++;
-            await UploadNext();
-        }
-
-        private async Task UploadNext()
-        {
-            for (; processingIndex < uploadingAvatars.Length; processingIndex++)
-            {
-                // returns true means start upload successful.
-                if (await Upload(uploadingAvatars[processingIndex]))
-                    return;
-                if (state == State.Aborting) return;
-            }
-
-            // done everything.
-
-            uploadingAvatars = Array.Empty<AvatarUploadSetting>();
-            processingIndex = -1;
         }
 
         private const string PrefabScenePath = "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity";
 
-        private async Task<bool> Upload(AvatarUploadSetting avatar)
+        enum State
         {
-            if (state != State.Idle)
-                throw new InvalidOperationException($"Don't start upload while {state}");
-            if (avatar == null) return false;
-            if (!avatar.GetCurrentPlatformInfo().enabled)
-            {
-                Debug.LogWarning($"Skipping uploading {avatar} because it's disabled for current platform");
-                return false;
-            }
-            AssetDatabase.SaveAssets();
-            if (Enumerable.Range(0, EditorSceneManager.sceneCount).Any(x => EditorSceneManager.GetSceneAt(x).isDirty))
-                EditorSceneManager.SaveOpenScenes();
-            Debug.Log($"Upload started for {avatar.name}");
+            Idle,
+            Abort,
+            StartingContinuousUpload,
 
-            VRCAvatarDescriptor avatarDescriptor;
-            if (avatar.avatarDescriptor.IsAssetReference())
+            StartingUploadAvatar,
+            StartingUploadAvatarSleeping,
+            StartingUploadAvatarSlept,
+
+            ContinueToNextAvatar,
+
+            ConfigurationScene,
+            ConfigurationSceneWaitingRuntimeBlueprintCreation,
+            ConfigurationSceneWaitingVrcSdkInitialization,
+            ConfigurationSceneSleeping2500,
+            ConfigurationSceneSlept2500,
+
+            WaitingUploadFinish,
+
+            SleepBetweenAvatar,
+            SleptBetweenAvatar,
+
+            FinishContinuousUpload,
+        }
+
+        // INPUT VARIABLE
+        [SerializeField] AvatarUploadSetting[] uploadingAvatars = Array.Empty<AvatarUploadSetting>();
+
+        // LOCAL VARIABLES
+        [SerializeField] int processingIndex = -1;
+        [SerializeField] AvatarUploadSetting uploadingAvatar;
+        [SerializeField] bool oldEnabled;
+        [SerializeField] VRCAvatarDescriptor avatarDescriptor;
+        [SerializeField] RuntimeBlueprintCreation blueprintCreation;
+
+        private State OnUpdateImpl(State state)
+        {
+            switch (state)
             {
-                avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
-                if (avatarDescriptor)
+                case State.Idle:
+                    return State.Idle;
+                case State.Abort:
+                    if (EditorApplication.isPlaying)
+                    {
+                        EditorApplication.isPlaying = false;
+                        return State.Abort;
+                    }
+                    else
+                    {
+                        uploadingAvatars = Array.Empty<AvatarUploadSetting>();
+                        return State.FinishContinuousUpload;
+                    }
+
+                case State.StartingContinuousUpload:
                 {
-                    var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
-                    var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
-                    avatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
-                    EditorSceneManager.SaveScene(scene, PrefabScenePath);
+                    if (EditorApplication.isPlaying) return state;
+                    AssetDatabase.SaveAssets();
+                    if (Enumerable.Range(0, SceneManager.sceneCount)
+                        .Any(x => SceneManager.GetSceneAt(x).isDirty))
+                        EditorSceneManager.SaveOpenScenes();
+
+                    processingIndex = 0;
+                    goto case State.StartingUploadAvatar;
                 }
-            }
-            else
-            {
-                // reference to scene
-                avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-                if (!avatarDescriptor)
+
+                //////// StartingUploadAvatar
+
+                case State.StartingUploadAvatar:
                 {
-                    avatar.avatarDescriptor.OpenScene();
-                    avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+                    if (EditorApplication.isPlaying) return state;
+                    var avatar = uploadingAvatars[processingIndex];
+                    Debug.Log($"Upload started for {avatar.name}");
+
+                    if (avatar.avatarDescriptor.IsAssetReference())
+                    {
+                        avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
+                        if (avatarDescriptor)
+                        {
+                            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
+                            var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
+                            avatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
+                            EditorSceneManager.SaveScene(scene, PrefabScenePath);
+                        }
+                    }
+                    else
+                    {
+                        // reference to scene
+                        avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+                        if (!avatarDescriptor)
+                        {
+                            avatar.avatarDescriptor.OpenScene();
+                            avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+                        }
+                    }
+
+                    if (!avatarDescriptor)
+                    {
+                        Debug.LogError("Upload failed: avatar not found", avatar);
+                        goto case State.ContinueToNextAvatar;
+                    }
+
+                    Debug.Log($"Actual avatar name: {avatarDescriptor.name}");
+
+                    uploadingAvatar = avatar;
+                    oldEnabled = avatarDescriptor.gameObject.activeSelf;
+                    avatarDescriptor.gameObject.SetActive(true);
+
+                    return Sleep(100, State.StartingUploadAvatarSleeping);
                 }
-            }
-            if (!avatarDescriptor)
-            {
-                Debug.LogError("Upload failed: avatar not found", avatar);
-                return false;
-            }
-
-            Debug.Log($"Actual avatar name: {avatarDescriptor.name}");
-
-            state = State.Building;
-            uploadingAvatar = avatar;
-            oldEnabled = avatarDescriptor.gameObject.activeSelf;
-            avatarDescriptor.gameObject.SetActive(true);
-
-            try
-            {
-                // wait a while to show updates on the window
-                await Task.Delay(100);
-                if (state != State.Building) return false; // aborted
-                
-                // pipelineManager.AssignId() doesn't mark pipeline manager dirty
-                var pipelineManager = avatarDescriptor.gameObject.GetComponent<PipelineManager>();
-                if (pipelineManager && string.IsNullOrEmpty(pipelineManager.blueprintId))
+                case State.StartingUploadAvatarSleeping: return state;
+                case State.StartingUploadAvatarSlept:
                 {
-                    pipelineManager.AssignId();
-                    EditorUtility.SetDirty(pipelineManager);
+                    if (EditorApplication.isPlaying) return state;
+                    // pipelineManager.AssignId() doesn't mark pipeline manager dirty
+                    var pipelineManager = avatarDescriptor.gameObject.GetComponent<PipelineManager>();
+                    if (pipelineManager && string.IsNullOrEmpty(pipelineManager.blueprintId))
+                    {
+                        pipelineManager.AssignId();
+                        EditorUtility.SetDirty(pipelineManager);
+                        EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
+                    }
+
+                    var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
+                    return successful ? State.ConfigurationScene : State.ContinueToNextAvatar;
                 }
 
-                var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
-                state = State.WaitingForUpload;
-                if (!successful)
-                    ResetUploadingAvatar(avatarDescriptor);
+                //////// ContinueToNextAvatar
 
-                return successful;
-            }
-            catch
-            {
-                ResetUploadingAvatar(avatarDescriptor);
-                throw;
+                case State.ContinueToNextAvatar:
+                {
+                    if (EditorApplication.isPlaying) return state;
+                    processingIndex++;
+                    if (processingIndex < uploadingAvatars.Length) return State.StartingUploadAvatar;
+                    return State.FinishContinuousUpload;
+                }
+
+                //////// WaitingConfigurationScene
+
+                case State.ConfigurationScene:
+                {
+                    if (!EditorApplication.isPlaying) return state;
+                    blueprintCreation = null;
+                    return State.ConfigurationSceneWaitingRuntimeBlueprintCreation;
+                }
+
+                // wait for RuntimeBlueprintCreation
+                case State.ConfigurationSceneWaitingRuntimeBlueprintCreation:
+                {
+                    if (!EditorApplication.isPlaying) return State.WaitingUploadFinish; // Abort current avatar.
+                    blueprintCreation = Object.FindObjectOfType<RuntimeBlueprintCreation>();
+                    if (!blueprintCreation)
+                        return State.ConfigurationSceneWaitingRuntimeBlueprintCreation;
+                    return State.ConfigurationSceneWaitingVrcSdkInitialization;
+                }
+                case State.ConfigurationSceneWaitingVrcSdkInitialization:
+                {
+                    if (!EditorApplication.isPlaying) return State.WaitingUploadFinish; // Abort current avatar.
+                    if (blueprintCreation.titleText.text == "New Avatar Creation")
+                        return State.ConfigurationSceneWaitingVrcSdkInitialization;
+                    // finished sdk initialization
+
+                    if (blueprintCreation.titleText.text == "New Avatar")
+                    {
+                        blueprintCreation.titleText.text = "New Avatar with Continuous Avatar Uploader";
+                        return State.WaitingUploadFinish; // Waiting user first upload
+                    }
+
+                    // New Avatar Creation
+                    blueprintCreation.titleText.text = "Upload Avatar using Continuous Avatar Uploader!";
+
+                    var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
+                    blueprintCreation.shouldUpdateImageToggle.isOn = platformInfo.updateImage;
+
+                    return Sleep(2500, State.ConfigurationSceneSleeping2500);
+                }
+                case State.ConfigurationSceneSlept2500:
+                {
+                    if (!EditorApplication.isPlaying) return State.WaitingUploadFinish; // Abort current avatar.
+                    var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
+                    if (platformInfo.versioningEnabled)
+                    {
+                        long versionName;
+                        (blueprintCreation.blueprintDescription.text, versionName) =
+                            UpdateVersionName(blueprintCreation.blueprintDescription.text,
+                                platformInfo.versionNamePrefix);
+                        if (platformInfo.gitEnabled)
+                        {
+                            var tagName = platformInfo.tagPrefix + versionName + platformInfo.tagSuffix;
+                            AddGitTag(tagName);
+                        }
+                    }
+
+                    EditorPatcher.Patcher.DisplayDialog += args =>
+                    {
+                        if (args.Title == "VRChat SDK") args.Result = true;
+                    };
+
+                    blueprintCreation.SetupUpload();
+                    return State.WaitingUploadFinish;
+                }
+
+                //////// WaitingUploadFinish
+                case State.WaitingUploadFinish:
+                {
+                    if (EditorApplication.isPlaying) return state;
+                    if (uploadingAvatar.avatarDescriptor.IsAssetReference())
+                    {
+                        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene); // without saving anything
+                        AssetDatabase.DeleteAsset(PrefabScenePath);
+                    }
+                    else
+                    {
+                        avatarDescriptor.gameObject.gameObject.SetActive(oldEnabled);
+                    }
+
+                    uploadingAvatar = null;
+                    return Sleep((int)(sleepSeconds * 1000), State.SleepBetweenAvatar);
+                }
+                //////// SleepBetweenAvatar
+                case State.SleepBetweenAvatar:
+                    return state;
+                case State.SleptBetweenAvatar:
+                    if (EditorApplication.isPlaying) return state;
+                    goto case State.ContinueToNextAvatar;
+
+                case State.FinishContinuousUpload:
+                    if (EditorApplication.isPlaying) return state;
+                    EditorSceneManager.NewScene(NewSceneSetup.EmptyScene); // without saving anything
+                    AssetDatabase.DeleteAsset(PrefabScenePath);
+                    return State.Idle;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(state), state, null);
             }
         }
 
-        private void ResetUploadingAvatar(VRCAvatarDescriptor avatarDescriptor = null)
+        private State Sleep(int milliseconds, State nextState)
         {
-            if (uploadingAvatar == null) return;
-            if (uploadingAvatar.avatarDescriptor.IsAssetReference())
+            async void Waiter()
             {
-                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene); // without saving anything
-                AssetDatabase.DeleteAsset(PrefabScenePath);
-            }
-            else
-            {
-                if (!avatarDescriptor)
-                    avatarDescriptor = uploadingAvatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-
-                if (avatarDescriptor)
-                    avatarDescriptor.gameObject.gameObject.SetActive(oldEnabled);
+                await System.Threading.Tasks.Task.Delay(milliseconds);
+                if (nextState == state)
+                    state++;
             }
 
-            uploadingAvatar = null;
-            state = State.Idle;
-        }
-
-        private class AbortedException : Exception
-        {
-        }
-        private async void ConfigureSdkDisplayAndUpload()
-        {
-            try
-            {
-                await ConfigureSdkDisplayAndUploadImpl();
-            }
-            catch (AbortedException)
-            {
-                Debug.LogError("[ContinuousAvatarUploader] Aborted upload process");
-            }
-        }
-        async Task ConfigureSdkDisplayAndUploadImpl()
-        {
-            async Task Delay(int millisecondsDelay)
-            {
-                await Task.Delay(millisecondsDelay);
-                if (state != State.Uploading || !EditorApplication.isPlaying) throw new AbortedException();
-            }
-
-            RuntimeBlueprintCreation creation = null;
-            while (!creation)
-            {
-                creation = Object.FindObjectOfType<RuntimeBlueprintCreation>();
-                await Delay(10);
-            }
-
-            var titleText = creation.titleText;
-            var descriptionField = creation.blueprintDescription;
-            var shouldUpdateImageToggle = creation.shouldUpdateImageToggle;
-
-            while (titleText.text == "New Avatar Creation")
-                await Delay(100);
-
-            if (titleText.text == "New Avatar")
-            {
-                titleText.text = "New Avatar with Continuous Avatar Uploader";
-                return;
-            }
-
-            // New Avatar Creation
-            titleText.text = "Upload Avatar using Continuous Avatar Uploader!";
-
-            var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
-            shouldUpdateImageToggle.isOn = platformInfo.updateImage;            
-
-            await Delay(2500);
-
-
-            if (platformInfo.versioningEnabled)
-            {
-                long versionName;
-                (descriptionField.text, versionName) =
-                    UpdateVersionName(descriptionField.text, platformInfo.versionNamePrefix);
-                if (platformInfo.gitEnabled)
-                {
-                    var tagName = platformInfo.tagPrefix + versionName + platformInfo.tagSuffix;
-                    AddGitTag(tagName);
-                }
-            }
-
-            EditorPatcher.Patcher.DisplayDialog += args =>
-            {
-                if (args.Title == "VRChat SDK") args.Result = true;
-            };
-
-            creation.SetupUpload();
+            Waiter();
+            return nextState;
         }
 
         private (string, long) UpdateVersionName(string description, string versionPrefix)
@@ -405,7 +434,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     System.Diagnostics.Debug.Assert(p != null, nameof(p) + " != null");
                     p.WaitForExit();
-                    System.Diagnostics.Debug.Assert(p.ExitCode == 0, 
+                    System.Diagnostics.Debug.Assert(p.ExitCode == 0,
                         $"git command exit with non zer value: {p.ExitCode}");
                 }
             }
@@ -449,21 +478,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                             builder.Append(c);
                             break;
                     }
-                } 
+                }
 
                 builder.Append('"');
 
                 return builder.ToString();
             }
-        }
-
-        enum State
-        {
-            Idle,
-            Building,
-            WaitingForUpload,
-            Uploading,
-            Aborting,
         }
     }
 }
