@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.SceneManagement;
 using VRC.SDK3.Avatars.Components;
 using Object = UnityEngine.Object;
 
@@ -95,7 +96,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (info.updateImage)
                 {
                     EditorGUI.indentLevel++;
-                    EditorGUI.BeginDisabledGroup(!_cachedAvatar || !_cachedAvatar.gameObject.scene.IsValid());
+                    EditorGUI.BeginDisabledGroup(!_cachedAvatar);
                     if (_previewCameraManager != null)
                     {
                         _previewCameraManager.DrawPreview();
@@ -163,6 +164,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private bool _prevLocked;
         private readonly VRCAvatarDescriptor _cachedAvatar;
         private readonly UnityEditor.Editor _editor;
+        private readonly Scene _previewScene;
 
         public PreviewCameraManager([NotNull] UnityEditor.Editor editor,
             [NotNull] VRCAvatarDescriptor cachedAvatar)
@@ -171,6 +173,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (cachedAvatar == null) throw new ArgumentNullException(nameof(cachedAvatar));
             _editor = editor;
             _cachedAvatar = cachedAvatar;
+
+            if (EditorUtility.IsPersistent(cachedAvatar))
+            {
+                _previewScene = EditorSceneManager.NewPreviewScene();
+                PrefabUtility.LoadPrefabContentsIntoPreviewScene(
+                    AssetDatabase.GetAssetPath(cachedAvatar), _previewScene);
+            }
 
             _prevLocked = ActiveEditorTracker.sharedTracker.isLocked;
             ActiveEditorTracker.sharedTracker.isLocked = true;
@@ -183,7 +192,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _camera.nearClipPlane = 0.01f;
             _camera.farClipPlane = 100f;
             _camera.allowHDR = false;
-            _camera.scene = cachedAvatar.gameObject.scene;
+            _camera.scene = _previewScene.IsValid() ? _previewScene : cachedAvatar.gameObject.scene;
             cachedAvatar.PositionPortraitCamera(_camera.transform);
             EditorApplication.update += OnUpdate;
             Selection.objects = new Object[] { _camera.gameObject };
@@ -253,6 +262,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _camera = null;
             Selection.objects = new []{_editor.target};
             ActiveEditorTracker.sharedTracker.isLocked = _prevLocked;
+
+            // ReSharper disable once PossiblyImpureMethodCallOnReadonlyVariable // IsValid doesn't change
+            if (_previewScene.IsValid())
+                EditorSceneManager.ClosePreviewScene(_previewScene);
         }
     }
 }
