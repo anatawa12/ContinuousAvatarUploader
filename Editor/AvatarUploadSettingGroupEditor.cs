@@ -7,14 +7,14 @@ using Debug = System.Diagnostics.Debug;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
-    [CustomEditor(typeof(AvatarDescriptorGroup))]
-    public class AvatarDescriptorGroupEditor : UnityEditor.Editor
+    [CustomEditor(typeof(AvatarUploadSettingGroup))]
+    public class AvatarUploadSettingGroupEditor : UnityEditor.Editor
     {
-        private AvatarDescriptorGroup _asset;
+        private AvatarUploadSettingGroup _asset;
 
         public override VisualElement CreateInspectorGUI()
         {
-            _asset = (AvatarDescriptorGroup)target;
+            _asset = (AvatarUploadSettingGroup)target;
 
             var root = new VisualElement()
             {
@@ -38,7 +38,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (GUILayout.Button("Add Avatar"))
                 {
                     Debug.Assert(avatarDescriptor != null, nameof(avatarDescriptor) + " != null");
-                    var newObj = ScriptableObject.CreateInstance<AvatarDescriptor>();
+                    var newObj = ScriptableObject.CreateInstance<AvatarUploadSetting>();
                     newObj.avatarDescriptor = new MaySceneReference(avatarDescriptor);
                     newObj.name = newObj.avatarName = avatarDescriptor.gameObject.name;
 
@@ -57,7 +57,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             return root;
         }
 
-        private VisualElement CreateDescriptorInspector(AvatarDescriptor descriptor)
+        private VisualElement CreateDescriptorInspector(AvatarUploadSetting descriptor)
         {
             var container = new VisualElement();
             container.Add(new InspectorElement(descriptor));

@@ -4,15 +4,15 @@ using VRC.SDK3.Avatars.Components;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
-    [CustomEditor(typeof(AvatarDescriptor))]
-    public class AvatarDescriptorEditor : UnityEditor.Editor
+    [CustomEditor(typeof(AvatarUploadSetting))]
+    public class AvatarUploadSettingEditor : UnityEditor.Editor
     {
         private VRCAvatarDescriptor _cachedAvatar;
         private bool _settingAvatar;
 
         public override void OnInspectorGUI()
         {
-            var asset = (AvatarDescriptor)target;
+            var asset = (AvatarUploadSetting)target;
             EditorGUI.BeginChangeCheck();
 
             AvatarDescriptors(asset);
@@ -21,7 +21,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 EditorUtility.SetDirty(asset);
         }
 
-        private void AvatarDescriptors(AvatarDescriptor avatar)
+        private void AvatarDescriptors(AvatarUploadSetting avatar)
         {
             if (avatar.avatarDescriptor.IsNull())
                 _settingAvatar = true;

@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     [CreateAssetMenu]
-    public class AvatarDescriptor : ScriptableObject
+    public class AvatarUploadSetting : ScriptableObject
     {
         public string avatarName;
         public MaySceneReference avatarDescriptor;

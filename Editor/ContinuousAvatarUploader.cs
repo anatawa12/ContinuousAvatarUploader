@@ -26,15 +26,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class ContinuousAvatarUploader : EditorWindow
     {
         [SerializeField] State state;
-        [SerializeField] AvatarDescriptor[] avatarDescriptors = Array.Empty<AvatarDescriptor>();
-        [SerializeField] AvatarDescriptorGroup[] groups = Array.Empty<AvatarDescriptorGroup>();
+        [SerializeField] AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
+        [SerializeField] AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
         [Tooltip("The time sleeps between upload")]
         [SerializeField] float sleepSeconds = 3;
 
         // for uploading avatars
         [SerializeField] int processingIndex = -1;
-        [SerializeField] AvatarDescriptor[] uploadingAvatars = Array.Empty<AvatarDescriptor>();
-        [SerializeField] AvatarDescriptor uploadingAvatar;
+        [SerializeField] AvatarUploadSetting[] uploadingAvatars = Array.Empty<AvatarUploadSetting>();
+        [SerializeField] AvatarUploadSetting uploadingAvatar;
         [SerializeField] bool oldEnabled;
         [SerializeField] bool sleeping;
 
@@ -49,7 +49,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private void OnEnable()
         {
             _serialized = new SerializedObject(this);
-            _avatarDescriptor = _serialized.FindProperty(nameof(avatarDescriptors));
+            _avatarDescriptor = _serialized.FindProperty(nameof(avatarSettings));
             _groups = _serialized.FindProperty(nameof(groups));
             _sleepSeconds = _serialized.FindProperty(nameof(sleepSeconds));
             EditorApplication.update += OnUpdate;
@@ -68,7 +68,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 GUILayout.Label("UPLOAD IN PROGRESS");
                 if (uploadingAvatar)
                 {
-                    EditorGUILayout.ObjectField("Uploading", uploadingAvatar, typeof(AvatarDescriptor), true);
+                    EditorGUILayout.ObjectField("Uploading", uploadingAvatar, typeof(AvatarUploadSetting), true);
                 }
                 else
                 {
@@ -85,8 +85,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUILayout.PropertyField(_sleepSeconds);
             _serialized.ApplyModifiedProperties();
 
-            var noDescriptors = avatarDescriptors.Length == 0 && groups.Length == 0;
-            var anyNull = avatarDescriptors.Any(x => !x);
+            var noDescriptors = avatarSettings.Length == 0 && groups.Length == 0;
+            var anyNull = avatarSettings.Any(x => !x);
             var anyGroupNull = groups.Any(x => !x);
             var playMode = !uploadingAvatar && EditorApplication.isPlayingOrWillChangePlaymode;
             var noCredentials = !APIUser.IsLoggedIn;
@@ -100,9 +100,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (GUILayout.Button("Start Upload"))
                 {
                     if (groups.Length == 0)
-                        uploadingAvatars = avatarDescriptors;
+                        uploadingAvatars = avatarSettings;
                     else
-                        uploadingAvatars = avatarDescriptors.Concat(groups.SelectMany(x => x.avatars)).ToArray();
+                        uploadingAvatars = avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
                     StartContinuousUpload();
                     EditorUtility.SetDirty(this);
                 }
@@ -136,7 +136,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
                 else
                 {
-                    uploadingAvatars = Array.Empty<AvatarDescriptor>();
+                    uploadingAvatars = Array.Empty<AvatarUploadSetting>();
                     processingIndex = -1;
                     sleeping = false;
                     if (uploadingAvatar)
@@ -175,13 +175,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             // done everything.
 
-            uploadingAvatars = Array.Empty<AvatarDescriptor>();
+            uploadingAvatars = Array.Empty<AvatarUploadSetting>();
             processingIndex = -1;
         }
 
         private const string PrefabScenePath = "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity";
 
-        private async Task<bool> Upload(AvatarDescriptor avatar)
+        private async Task<bool> Upload(AvatarUploadSetting avatar)
         {
             if (state != State.Idle)
                 throw new InvalidOperationException($"Don't start upload while {state}");
