@@ -26,18 +26,22 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class ContinuousAvatarUploader : EditorWindow
     {
         [SerializeField] State state;
-        [SerializeField] int processingIndex = -1;
         [SerializeField] AvatarDescriptor[] avatarDescriptors = Array.Empty<AvatarDescriptor>();
         [SerializeField] AvatarDescriptorGroup[] groups = Array.Empty<AvatarDescriptorGroup>();
+        [Tooltip("The time sleeps between upload")]
+        [SerializeField] float sleepSeconds = 3;
 
         // for uploading avatars
+        [SerializeField] int processingIndex = -1;
         [SerializeField] AvatarDescriptor[] uploadingAvatars = Array.Empty<AvatarDescriptor>();
         [SerializeField] AvatarDescriptor uploadingAvatar;
         [SerializeField] bool oldEnabled;
+        [SerializeField] bool sleeping;
 
         private SerializedObject _serialized;
         private SerializedProperty _avatarDescriptor;
         private SerializedProperty _groups;
+        private SerializedProperty _sleepSeconds;
 
         [MenuItem("Window/Continuous Avatar Uploader")]
         public static void OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
@@ -47,6 +51,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _serialized = new SerializedObject(this);
             _avatarDescriptor = _serialized.FindProperty(nameof(avatarDescriptors));
             _groups = _serialized.FindProperty(nameof(groups));
+            _sleepSeconds = _serialized.FindProperty(nameof(sleepSeconds));
             EditorApplication.update += OnUpdate;
         }
 
@@ -57,18 +62,24 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void OnGUI()
         {
-            if (uploadingAvatar)
+            var uploadInProgress = uploadingAvatar || sleeping;
+            if (uploadInProgress)
             {
                 GUILayout.Label("UPLOAD IN PROGRESS");
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Uploading ");
-                EditorGUILayout.ObjectField(uploadingAvatar, typeof(AvatarDescriptor), true);
-                GUILayout.EndHorizontal();
+                if (uploadingAvatar)
+                {
+                    EditorGUILayout.ObjectField("Uploading", uploadingAvatar, typeof(AvatarDescriptor), true);
+                }
+                else
+                {
+                    GUILayout.Label("Sleeping a little");
+                }
             }
-            EditorGUI.BeginDisabledGroup(uploadingAvatar);
+            EditorGUI.BeginDisabledGroup(uploadInProgress);
             _serialized.Update();
             EditorGUILayout.PropertyField(_avatarDescriptor);
             EditorGUILayout.PropertyField(_groups);
+            EditorGUILayout.PropertyField(_sleepSeconds);
             _serialized.ApplyModifiedProperties();
 
             var noDescriptors = avatarDescriptors.Length == 0 && groups.Length == 0;
@@ -89,8 +100,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         uploadingAvatars = avatarDescriptors;
                     else
                         uploadingAvatars = avatarDescriptors.Concat(groups.SelectMany(x => x.avatars)).ToArray();
-                    processingIndex = 0;
-                    ContinueUpload();
+                    StartContinuousUpload();
                     EditorUtility.SetDirty(this);
                 }
             }
@@ -104,20 +114,34 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (EditorApplication.isPlaying && state == State.WaitingForUpload)
             {
                 state = State.Uploading;
-                StartUpload();
+                ConfigureSdkDisplayAndUpload();
             }
             if (!EditorApplication.isPlaying && state == State.Uploading)
             {
                 ResetUploadingAvatar();
                 if (processingIndex >= 0)
                 {
-                    processingIndex++;
                     ContinueUpload();
                 }
             }
         }
 
+        private async void StartContinuousUpload()
+        {
+            processingIndex = 0;
+            await UploadNext();
+        }
+
         private async void ContinueUpload()
+        {
+            sleeping = true;
+            await Task.Delay((int)(sleepSeconds * 1000));
+            if (!sleeping) return; // aborted.
+            processingIndex++;
+            await UploadNext();
+        }
+
+        private async Task UploadNext()
         {
             for (; processingIndex < uploadingAvatars.Length; processingIndex++)
             {
@@ -196,13 +220,33 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             state = State.Idle;
         }
 
-        public async void StartUpload()
+        private class AbortedException : Exception
         {
+        }
+        private async void ConfigureSdkDisplayAndUpload()
+        {
+            try
+            {
+                await ConfigureSdkDisplayAndUploadImpl();
+            }
+            catch (AbortedException)
+            {
+                Debug.LogError("[ContinuousAvatarUploader] Aborted upload process");
+            }
+        }
+        async Task ConfigureSdkDisplayAndUploadImpl()
+        {
+            async Task Delay(int millisecondsDelay)
+            {
+                await Task.Delay(millisecondsDelay);
+                if (state != State.Uploading || !EditorApplication.isPlaying) throw new AbortedException();
+            }
+
             RuntimeBlueprintCreation creation = null;
             while (!creation)
             {
                 creation = FindObjectOfType<RuntimeBlueprintCreation>();
-                await Task.Delay(10);
+                await Delay(10);
             }
 
             var titleText = creation.titleText;
@@ -214,7 +258,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 .GetComponent<Toggle>();
 
             while (titleText.text == "New Avatar Creation")
-                await Task.Delay(100);
+                await Delay(100);
 
             if (titleText.text == "New Avatar")
             {
@@ -225,7 +269,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // New Avatar Creation
             titleText.text = "Upload Avatar using Continuous Avatar Uploader!";
 
-            await Task.Delay(2500);
+            await Delay(2500);
 
             var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
 
