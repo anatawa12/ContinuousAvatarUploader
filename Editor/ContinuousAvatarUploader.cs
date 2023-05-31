@@ -168,6 +168,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
             catch
             {
+                Debug.LogError("Aborting the build process because of error.");
                 state = State.Abort;
                 throw;
             }
@@ -200,6 +201,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             SleptBetweenAvatar,
 
             FinishContinuousUpload,
+            FinishContinuousUploadAbort,
         }
 
         // INPUT VARIABLE
@@ -230,7 +232,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     else
                     {
                         uploadingAvatars = Array.Empty<AvatarUploadSetting>();
-                        return State.FinishContinuousUpload;
+                        return State.FinishContinuousUploadAbort;
                     }
 
                 case State.StartingContinuousUpload:
@@ -410,6 +412,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     if (EditorApplication.isPlaying) return state;
                     goto case State.ContinueToNextAvatar;
 
+                case State.FinishContinuousUploadAbort:
                 case State.FinishContinuousUpload:
                     if (EditorApplication.isPlaying) return state;
                     if (lastOpenedScenes.Length == 0)
@@ -424,6 +427,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     }
 
                     AssetDatabase.DeleteAsset(PrefabScenePath);
+                    if (state == State.FinishContinuousUploadAbort)
+                    {
+                        EditorUtility.DisplayDialog("Continuous Avatar Uploader",
+                            "Aborted the build process",
+                            "OK");
+                    }
                     return State.Idle;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(state), state, null);
