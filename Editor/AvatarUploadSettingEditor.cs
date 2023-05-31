@@ -185,6 +185,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _camera.scene = cachedAvatar.gameObject.scene;
             cachedAvatar.PositionPortraitCamera(_camera.transform);
             EditorApplication.update += OnUpdate;
+            Selection.objects = new Object[] { _camera.gameObject };
         }
 
         private Vector3 _cameraPositionOld;
@@ -244,6 +245,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             Object.DestroyImmediate(_camera.gameObject);
             _camera = null;
+            Selection.objects = new []{_editor.target};
             ActiveEditorTracker.sharedTracker.isLocked = _prevLocked;
         }
     }
