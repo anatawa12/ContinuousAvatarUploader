@@ -179,6 +179,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             processingIndex = -1;
         }
 
+        private const string PrefabScenePath = "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity";
+
         private async Task<bool> Upload(AvatarDescriptor avatar)
         {
             if (state != State.Idle)
@@ -203,8 +205,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
                     var newGameObject = Instantiate(avatarDescriptor.gameObject);
                     avatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
-                    EditorSceneManager.SaveScene(scene,
-                        "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity");
+                    EditorSceneManager.SaveScene(scene, PrefabScenePath);
                 }
             }
             else
@@ -264,6 +265,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (uploadingAvatar.avatarDescriptor.IsAssetReference())
             {
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene); // without saving anything
+                AssetDatabase.DeleteAsset(PrefabScenePath);
             }
             else
             {
