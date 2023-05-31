@@ -29,24 +29,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 inspectors.Add(CreateDescriptorInspector(assetAvatar));
 
             VRCAvatarDescriptor avatarDescriptor = null;
-            bool enabled = true;
             var trailer = new IMGUIContainer(() =>
             {
-                EditorGUI.BeginChangeCheck();
                 avatarDescriptor = EditorGUILayout.ObjectField("Avatar to Add", avatarDescriptor,
                     typeof(VRCAvatarDescriptor), true) as VRCAvatarDescriptor;
-                if (EditorGUI.EndChangeCheck())
-                {
-                    var id = GlobalObjectId.GetGlobalObjectIdSlow(avatarDescriptor);
-                    enabled = id.identifierType == 2;
-                }
 
-                EditorGUI.BeginDisabledGroup(!avatarDescriptor || !enabled);
+                EditorGUI.BeginDisabledGroup(!avatarDescriptor);
                 if (GUILayout.Button("Add Avatar"))
                 {
                     Debug.Assert(avatarDescriptor != null, nameof(avatarDescriptor) + " != null");
                     var newObj = ScriptableObject.CreateInstance<AvatarDescriptor>();
-                    newObj.avatarDescriptor = new SceneReference(avatarDescriptor);
+                    newObj.avatarDescriptor = new MaySceneReference(avatarDescriptor);
                     newObj.name = newObj.avatarName = avatarDescriptor.gameObject.name;
 
                     ArrayUtility.Add(ref _asset.avatars, newObj);

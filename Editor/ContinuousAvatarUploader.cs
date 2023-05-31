@@ -190,14 +190,32 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 return false;
             }
             AssetDatabase.SaveAssets();
-            EditorSceneManager.SaveOpenScenes();
+            if (Enumerable.Range(0, EditorSceneManager.sceneCount).Any(x => EditorSceneManager.GetSceneAt(x).isDirty))
+                EditorSceneManager.SaveOpenScenes();
             Debug.Log($"Upload started for {avatar.name}");
 
-            var avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-            if (!avatarDescriptor)
+            VRCAvatarDescriptor avatarDescriptor;
+            if (avatar.avatarDescriptor.IsAssetReference())
             {
-                EditorSceneManager.OpenScene(AssetDatabase.GetAssetPath(avatar.avatarDescriptor.scene));
+                avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
+                if (avatarDescriptor)
+                {
+                    var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+                    var newGameObject = Instantiate(avatarDescriptor.gameObject);
+                    avatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
+                    EditorSceneManager.SaveScene(scene,
+                        "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity");
+                }
+            }
+            else
+            {
+                // reference to scene
                 avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+                if (!avatarDescriptor)
+                {
+                    avatar.avatarDescriptor.OpenScene();
+                    avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+                }
             }
             if (!avatarDescriptor)
             {
@@ -242,11 +260,19 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void ResetUploadingAvatar(VRCAvatarDescriptor avatarDescriptor = null)
         {
-            if (!avatarDescriptor)
-                avatarDescriptor = uploadingAvatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+            if (uploadingAvatar == null) return;
+            if (uploadingAvatar.avatarDescriptor.IsAssetReference())
+            {
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene); // without saving anything
+            }
+            else
+            {
+                if (!avatarDescriptor)
+                    avatarDescriptor = uploadingAvatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
 
-            if (avatarDescriptor)
-                avatarDescriptor.gameObject.gameObject.SetActive(oldEnabled);
+                if (avatarDescriptor)
+                    avatarDescriptor.gameObject.gameObject.SetActive(oldEnabled);
+            }
 
             uploadingAvatar = null;
             state = State.Idle;

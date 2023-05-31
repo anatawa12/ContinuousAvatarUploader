@@ -30,9 +30,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 _cachedAvatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField("Set Avatar: ", 
                     null, typeof(VRCAvatarDescriptor), true);
                 
-                if (_cachedAvatar && GlobalObjectId.GetGlobalObjectIdSlow(_cachedAvatar).identifierType == 2)
+                if (_cachedAvatar)
                 {
-                    avatar.avatarDescriptor = new SceneReference(_cachedAvatar);
+                    avatar.avatarDescriptor = new MaySceneReference(_cachedAvatar);
                     // might be reverted if it's individual asset but
                     // this is good for DescriptorSet
                     avatar.name = avatar.avatarName = _cachedAvatar.name;
@@ -56,7 +56,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 else
                 {
                     EditorGUILayout.LabelField("Avatar", avatar.avatarName);
-                    EditorGUILayout.ObjectField("In scene", avatar.avatarDescriptor.scene, typeof(SceneAsset), false);
+                    EditorGUILayout.ObjectField("In scene", avatar.avatarDescriptor.asset, typeof(SceneAsset), false);
                 }
 
                 if (GUILayout.Button("Change Avatar"))
