@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using JetBrains.Annotations;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -209,9 +210,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 _camera.pixelRect = new Rect(0, 0, cameraRect.width, cameraRect.height);
                 _camera.Render();
                 Graphics.DrawTexture(cameraRect, previewTexture, new Rect(0, 0, 1, 1), 
-                    0, 0, 0, 0, GUI.color);
+                    0, 0, 0, 0, GUI.color, _guiTextureBlit2SrgbMaterial);
             }
         }
+
+        readonly Material _guiTextureBlit2SrgbMaterial = typeof(EditorGUIUtility)
+                .GetProperty("GUITextureBlit2SRGBMaterial", BindingFlags.Static | BindingFlags.NonPublic)
+                ?.GetValue(typeof(EditorGUIUtility), null) as Material;
 
         private RenderTexture _previewTexture;
 
