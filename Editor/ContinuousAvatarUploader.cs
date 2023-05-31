@@ -20,6 +20,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         [SerializeField] AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
         [SerializeField] AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
+        [Tooltip("The time sleeps between upload")] [SerializeField]
+        public float sleepSeconds = 3;
 
         // for uploading avatars
         [SerializeField] private UploadProcess process = new UploadProcess();
@@ -37,7 +39,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _serialized = new SerializedObject(this);
             _avatarDescriptor = _serialized.FindProperty(nameof(avatarSettings));
             _groups = _serialized.FindProperty(nameof(groups));
-            _sleepSeconds = _serialized.FindProperty(nameof(process) + '.' + nameof(process.sleepSeconds));
+            _sleepSeconds = _serialized.FindProperty(nameof(sleepSeconds));
             process.OnEnable();
             process.Repaint += Repaint;
         }
@@ -92,7 +94,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     var uploadingAvatars = groups.Length == 0
                         ? avatarSettings
                         : avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
-                    process.StartContinuousUpload(uploadingAvatars);
+                    process.StartContinuousUpload((int) (sleepSeconds * 1000), uploadingAvatars);
                     EditorUtility.SetDirty(this);
                 }
             }
@@ -109,11 +111,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     [Serializable]
     sealed class UploadProcess
     {
-        [SerializeField] State state;
-
-        [Tooltip("The time sleeps between upload")] [SerializeField]
-        public float sleepSeconds = 3;
-
         public event Action Repaint;
 
         public AvatarUploadSetting UploadingAvatar => uploadingAvatar;
@@ -125,10 +122,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             state = State.Abort;
         }
 
-        public void StartContinuousUpload(AvatarUploadSetting[] avatars)
+        public void StartContinuousUpload(int sleepMilliseconds, AvatarUploadSetting[] avatars)
         {
             if (state != State.Idle) throw new InvalidOperationException("Cannot start upload in non idle state");
             uploadingAvatars = avatars;
+            this.sleepMilliseconds = sleepMilliseconds;
             state = State.StartingContinuousUpload;
         }
 
@@ -182,7 +180,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         // INPUT VARIABLE
+        [SerializeField] State state;
         [SerializeField] AvatarUploadSetting[] uploadingAvatars = Array.Empty<AvatarUploadSetting>();
+        [SerializeField] int sleepMilliseconds;
 
         // LOCAL VARIABLES
         [SerializeField] int processingIndex = -1;
@@ -372,7 +372,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     }
 
                     uploadingAvatar = null;
-                    return Sleep((int)(sleepSeconds * 1000), State.SleepBetweenAvatar);
+                    return Sleep(sleepMilliseconds, State.SleepBetweenAvatar);
                 }
                 //////// SleepBetweenAvatar
                 case State.SleepBetweenAvatar:
