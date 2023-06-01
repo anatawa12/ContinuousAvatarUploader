@@ -30,11 +30,13 @@ jobs:
 
       - name: treeless clone
         if: steps.check-label.outputs.disabled != 'yes'
+        env:
+          REPO: ${{ github.server_url }}/${{ github.repository }}.git
         run: |
-          # git clone --filter tree:0 https://github.com/anatawa12/AvatarOptimizer.git $GITHUB_REF
+          # git clone --filter tree:0 $REPO $GITHUB_REF
           # without checkout
           git init
-          git remote add origin https://github.com/anatawa12/AvatarOptimizer.git
+          git remote add origin "$REPO"
           git config remote.origin.promisor true
           git config remote.origin.partialclonefilter tree:0
           git fetch origin $GITHUB_REF
