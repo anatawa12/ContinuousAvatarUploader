@@ -80,6 +80,49 @@ jobs:
         env:
           RELEASE_KIND_IN: ${{ github.event.inputs.release_kind }}
 
+      # region changelog
+      - name: Create Changelog
+        id: changelog
+        uses: anatawa12/sh-actions/changelog/prepare-release@master
+        with:
+          version: ${{ env.VERSION }}
+          prerelease: ${{ env.PRERELEASE }}
+          tag-prefix: v
+          prerelease-note-heading: |
+            Version ${{ env.VERSION }}
+            ---
+            
+            Installer unitypackage for this version is [here][installer for this].
+
+            [installer for this]: https://api.anatawa12.com/create-vpai/?name=ContinuousAvatarUploader-{}-installer.unitypackage&repo=https://vpm.anatawa12.com/vpm.json&package=com.anatawa12.continuous-avatar-uploader&version=${{ env.VERSION }}
+          release-note-heading: |
+            Version ${{ env.VERSION }}
+            ---
+            
+            Installer unitypackage for this version is [here][installer for this].
+
+            [installer for this]: https://api.anatawa12.com/create-vpai/?name=ContinuousAvatarUploader-{}-installer.unitypackage&repo=https://vpm.anatawa12.com/vpm.json&package=com.anatawa12.continuous-avatar-uploader&version=${{ env.VERSION }}
+
+      - name: Upload CHANGELOG.md
+        if: ${{ !fromJSON(env.PRERELEASE) }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: CHANGELOG
+          path: CHANGELOG.md
+      - name: Upload CHANGELOG-PRERELEASE.md
+        uses: actions/upload-artifact@v3
+        with:
+          name: CHANGELOG-PRERELEASE
+          path: CHANGELOG-PRERELEASE.md
+      - run: cp "${{ steps.changelog.outputs.release-note }}" release-note.md
+      - name: Upload release note
+        uses: actions/upload-artifact@v3
+        with:
+          name: changelog
+          path: release-note.md
+      - run: rm release-note.md
+      # endregion changelog
+
       - name: Commit & tag version
         if: ${{ inputs.publish }}
         run: |
