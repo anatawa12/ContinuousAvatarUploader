@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog].
 
 ### Security
 
+## [0.1.0] - 2023-06-01
 ## [0.1.0-rc.1] - 2023-06-01
 ### Added
 - Changelog [`#11`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/11)
@@ -52,7 +53,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0-rc.1...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0-rc.1...v0.1.0
 [0.1.0-rc.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0-beta.1...v0.1.0-rc.1
 [0.1.0-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.3...0.1.0-beta.1
 [0.0.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.2...v0.0.3

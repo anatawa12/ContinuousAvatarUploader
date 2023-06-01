@@ -8,15 +8,8 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
-- Sleep between upload [`ccdec7a`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/ccdec7a6893877890c572f19cc7a4e575c4464ec)
-- Aborting Upload [`4ac239c`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/4ac239c1022c4011b2a15baf5a152d6bcd0ff358)
-- Workaround for Pipeline Manager is not marked as dirty [`9def9a7`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/9def9a76312122eda4e1594822dbde521627460a)
-- Uploading prefab avatars [`40f483a`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/40f483a21ec5cedb83077035f6995b80974f0f91)
-- Upload thumbnail every upload [`a6bb041`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/a6bb041ded4aee915e40b1017d93baee30c2a0eb)
-- Changelog `#11`
 
 ### Changed
-- Rename AvatarDescriptor -> AvatarUploadSetting [`fbd937a`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/fbd937a01dbaaec9accd6e6d2ed9b2f72f27dce4)
 
 ### Deprecated
 
@@ -25,6 +18,18 @@ The format is based on [Keep a Changelog].
 ### Fixed
 
 ### Security
+
+## [0.1.0] - 2023-06-01
+### Added
+- Sleep between upload [`ccdec7a`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/ccdec7a6893877890c572f19cc7a4e575c4464ec)
+- Aborting Upload [`4ac239c`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/4ac239c1022c4011b2a15baf5a152d6bcd0ff358)
+- Workaround for Pipeline Manager is not marked as dirty [`9def9a7`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/9def9a76312122eda4e1594822dbde521627460a)
+- Uploading prefab avatars [`40f483a`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/40f483a21ec5cedb83077035f6995b80974f0f91)
+- Upload thumbnail every upload [`a6bb041`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/a6bb041ded4aee915e40b1017d93baee30c2a0eb)
+- Changelog [`#11`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/11)
+
+### Changed
+- Rename AvatarDescriptor -> AvatarUploadSetting [`fbd937a`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/fbd937a01dbaaec9accd6e6d2ed9b2f72f27dce4)
 
 ## [0.0.3] - 2023-05-29
 ### Fixed
@@ -44,7 +49,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/anatawa12/ContinuousAvatarUploader/releases/tag/v0.0.1
