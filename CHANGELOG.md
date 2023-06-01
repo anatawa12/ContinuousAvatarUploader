@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog].
 - Workaround for Pipeline Manager is not marked as dirty [`9def9a7`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/9def9a76312122eda4e1594822dbde521627460a)
 - Uploading prefab avatars [`40f483a`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/40f483a21ec5cedb83077035f6995b80974f0f91)
 - Upload thumbnail every upload [`a6bb041`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/a6bb041ded4aee915e40b1017d93baee30c2a0eb)
+- Changelog `#11`
 
 ### Changed
 - Rename AvatarDescriptor -> AvatarUploadSetting [`fbd937a`](https://github.com/anatawa12/ContinuousAvatarUploader/commit/fbd937a01dbaaec9accd6e6d2ed9b2f72f27dce4)
