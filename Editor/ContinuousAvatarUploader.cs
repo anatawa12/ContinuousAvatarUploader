@@ -89,6 +89,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 new GUIContent("Take Thumbnail In PlayMode by Default", 
                     "If this is enabled, CAU will take Thumbnail after entering PlayMode."),
                 Preferences.TakeThumbnailInPlaymodeByDefault);
+            Preferences.ShowDialogWhenUploadFinished = EditorGUILayout.ToggleLeft(
+                new GUIContent("Show Dialog when Finished", 
+                    "If this is enabled, CAU will tell you upload finished."),
+                Preferences.ShowDialogWhenUploadFinished);
 
             IVRCSdkAvatarBuilderApi builder = null;
 
@@ -222,6 +226,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 _guiState = State.Configuring;
             }
+
+            if (Preferences.ShowDialogWhenUploadFinished)
+                EditorUtility.DisplayDialog("Continuous Avatar Uploader", "Finished Uploading Avatars!", "OK");
         }
 
         enum State
