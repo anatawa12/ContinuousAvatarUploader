@@ -1,8 +1,10 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -12,7 +14,7 @@ using VRC.Core;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3A.Editor;
 using VRC.SDKBase.Editor;
-using VRCSDK2;
+using VRC.SDKBase.Editor.Api;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
@@ -122,11 +124,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
     }
 
-    /*
-     * Logic to trigger avatar build us based on Avatar Phalanx which is published under MIT license.
-     * https://gist.github.com/pimaker/02d0dafe7e424a6ac198e2442bb66ac7
-     * Copyright (c) 2022 @pimaker on GitHub
-     */
     [Serializable]
     sealed class UploadProcess
     {
@@ -183,10 +180,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         // Not workings:
-        // - simple upload
         // - update description
         // - update thumbnail
         // Workings:
+        // - simple upload
 
         // INPUT VARIABLE
         [SerializeField] State state;
@@ -199,12 +196,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [SerializeField] AvatarUploadSetting uploadingAvatar;
         [SerializeField] bool oldEnabled;
         [SerializeField] VRCAvatarDescriptor avatarDescriptor;
-        [SerializeField] RuntimeBlueprintCreation blueprintCreation;
 
-        private async Task Upload()
+        private async Task Upload(CancellationToken cancellationToken)
         {
             VRCSdkControlPanel.TryGetBuilder<IVRCSdkAvatarBuilderApi>(out var builder);
             if (EditorApplication.isPlaying) throw new Exception("Playmode"); // TODO
+            if (builder.UploadState != SdkUploadState.Idle) throw new Exception("Invalid State"); // TODO
 
             AssetDatabase.SaveAssets();
             var scenes = Enumerable.Range(0, SceneManager.sceneCount).Select(SceneManager.GetSceneAt)
@@ -253,13 +250,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 oldEnabled = avatarDescriptor.gameObject.activeSelf;
                 avatarDescriptor.gameObject.SetActive(true);
 
-                await Task.Delay(100);
-
-                while (EditorApplication.isPlaying) ;
-                while (!ContinuousAvatarUploader.VerifyCredentials()) ;
+                await Task.Delay(100, cancellationToken);
 
                 // pipelineManager.AssignId() doesn't mark pipeline manager dirty
                 var pipelineManager = avatarDescriptor.gameObject.GetComponent<PipelineManager>();
+                if (!pipelineManager)
+                    pipelineManager = avatarDescriptor.gameObject.AddComponent<PipelineManager>();
                 if (pipelineManager && string.IsNullOrEmpty(pipelineManager.blueprintId))
                 {
                     pipelineManager.AssignId();
@@ -267,55 +263,32 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
                 }
 
-                var successful = VRC_SdkBuilder.ExportAndUploadAvatarBlueprint(avatarDescriptor.gameObject);
-                if (!successful)
-                    continue;
-                while (!EditorApplication.isPlaying) ;
-                blueprintCreation = null;
-                if (!EditorApplication.isPlaying) goto WaitingUploadFinish; // Abort current avatar.
-                blueprintCreation = Object.FindObjectOfType<RuntimeBlueprintCreation>();
-                while (!blueprintCreation) ;
-                if (!EditorApplication.isPlaying) goto WaitingUploadFinish; // Abort current avatar.
-                while (blueprintCreation.titleText.text == "New Avatar Creation") ;
-                // finished sdk initialization
+                var creatingNewAvatar = string.IsNullOrWhiteSpace(pipelineManager.blueprintId);
+                if (creatingNewAvatar)
+                    throw new Exception("New Avatar Upload not supported yet");
 
-                if (blueprintCreation.titleText.text == "New Avatar")
+                VRCAvatar vrcAvatar;
+                try
                 {
-                    blueprintCreation.titleText.text = "New Avatar with Continuous Avatar Uploader";
-                    goto WaitingUploadFinish; // Waiting user first upload
+                    vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, true, cancellationToken);
                 }
-
-                // New Avatar Creation
-                blueprintCreation.titleText.text = "Upload Avatar using Continuous Avatar Uploader!";
-
-                var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
-                blueprintCreation.shouldUpdateImageToggle.isOn = platformInfo.updateImage;
-
-                await Task.Delay(2500);
-
-                if (!EditorApplication.isPlaying) goto WaitingUploadFinish; // Abort current avatar.
-                if (platformInfo.versioningEnabled)
+                catch (ApiErrorException ex)
                 {
-                    long versionName;
-                    (blueprintCreation.blueprintDescription.text, versionName) =
-                        UpdateVersionName(blueprintCreation.blueprintDescription.text,
-                            platformInfo.versionNamePrefix);
-                    if (platformInfo.gitEnabled)
+                    if (ex.StatusCode == HttpStatusCode.NotFound)
                     {
-                        var tagName = platformInfo.tagPrefix + versionName + platformInfo.tagSuffix;
-                        AddGitTag(tagName);
+                        throw new Exception("Uploading new avatar");
+                    }
+                    else
+                    {
+                        throw new Exception("Unknown error");
                     }
                 }
 
-                EditorPatcher.Patcher.DisplayDialog += args =>
-                {
-                    if (args.Title == "VRChat SDK") args.Result = true;
-                };
+                if (APIUser.CurrentUser == null || vrcAvatar.AuthorId != APIUser.CurrentUser?.id)
+                    throw new Exception("Uploading other user avatar.");
 
-                blueprintCreation.SetupUpload();
+                await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar, cancellationToken: cancellationToken);
 
-                WaitingUploadFinish:
-                while (EditorApplication.isPlaying);
                 if (!avatarDescriptor)
                     avatarDescriptor = uploadingAvatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
 
@@ -330,10 +303,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
 
                 uploadingAvatar = null;
-                await Task.Delay(sleepMilliseconds);
+                await Task.Delay(sleepMilliseconds, cancellationToken);
             }
 
-            while (EditorApplication.isPlaying);
             if (lastOpenedScenes.Length == 0)
             {
                 EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
