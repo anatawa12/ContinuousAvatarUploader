@@ -88,10 +88,18 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         public bool enabled;
         public bool updateImage;
+        public ImageTakeEditorMode imageTakeEditorMode;
         [FormerlySerializedAs("versionNameEnabled")] public bool versioningEnabled;
         public string versionNamePrefix = "";
         public bool gitEnabled;
         public string tagPrefix = "";
         public string tagSuffix = "";
+    }
+
+    public enum ImageTakeEditorMode
+    {
+        UseUploadGuiSetting,
+        InEditMode,
+        InPlayMode,
     }
 }
