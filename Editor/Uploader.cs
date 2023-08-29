@@ -76,7 +76,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (onException == null) onException = Debug.LogException;
 
             AssetDatabase.SaveAssets();
-            using (new PreventEnteringPlayModeScope())
+            using (var playmodeScope = new PreventEnteringPlayModeScope())
             using (new OpeningSceneRestoreScope())
             {
                 foreach (var avatar in uploadingAvatars)
@@ -89,7 +89,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     {
                         try
                         {
-                            await UploadAvatar(avatar, scope.AvatarDescriptor, builder, cancellationToken);
+                            await UploadAvatar(avatar, scope.AvatarDescriptor, playmodeScope, builder, cancellationToken);
                         }
                         catch (Exception e)
                         {
@@ -106,12 +106,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             AssetDatabase.DeleteAsset(PrefabScenePath);
         }
 
-        private static async Task UploadAvatar(
-            AvatarUploadSetting avatar,
+        private static async Task UploadAvatar(AvatarUploadSetting avatar,
             VRCAvatarDescriptor avatarDescriptor,
+            PreventEnteringPlayModeScope playmodeScope,
             IVRCSdkAvatarBuilderApi builder,
-            CancellationToken cancellationToken = default
-        )
+            CancellationToken cancellationToken = default)
         {
             if (!avatarDescriptor)
             {
@@ -130,7 +129,68 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // if picture is needed, take and use for upload
             string picturePath = null;
             if (platformInfo.updateImage || uploadingNewAvatar)
-                picturePath = TakePicture(avatarDescriptor, 1200, 900);
+            {
+                bool inPlayMode;
+                if (platformInfo.updateImage)
+                {
+                    switch (platformInfo.imageTakeEditorMode)
+                    {
+                        case ImageTakeEditorMode.UseUploadGuiSetting:
+                            inPlayMode = Preferences.TakeThumbnailInPlaymodeByDefault;
+                            break;
+                        case ImageTakeEditorMode.InEditMode:
+                            inPlayMode = false;
+                            break;
+                        case ImageTakeEditorMode.InPlayMode:
+                            inPlayMode = true;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
+                else
+                {
+                    inPlayMode = Preferences.TakeThumbnailInPlaymodeByDefault;
+                }
+
+
+                if (inPlayMode)
+                {
+                    // Entering playmode OR exiting playmode may destroy AvatarDescriptor
+                    // so we may re-get AvatarDescriptor Instance with GlobalObjectId
+                    var globalObjectId = GlobalObjectId.GetGlobalObjectIdSlow(avatarDescriptor);
+                    using (playmodeScope.AllowScope())
+                    {
+                        try
+                        {
+                            await Utils.EnterPlayMode();
+                            if (!avatarDescriptor)
+                                avatarDescriptor = ResolveAvatar("entered play mode");
+
+                            picturePath = TakePicture(avatarDescriptor, 1200, 900);
+                        }
+                        finally
+                        {
+                            await Utils.ExitPlayMode();
+                        }
+                        if (!avatarDescriptor) avatarDescriptor = ResolveAvatar("exited play mode");
+                    }
+
+                    VRCAvatarDescriptor ResolveAvatar(string when)
+                    {
+                        var newlyResolved =
+                            GlobalObjectId.GlobalObjectIdentifierToObjectSlow(globalObjectId) as VRCAvatarDescriptor;
+                        if (!newlyResolved)
+                            throw new Exception("We cannot re-resolve VRCAvatarDescriptor");
+                        Debug.Log($"Re-resolving avatar when {when}");
+                        return newlyResolved;
+                    }
+                }
+                else
+                {
+                    picturePath = TakePicture(avatarDescriptor, 1200, 900);
+                }
+            }
 
             // try to reset errors
             var controlPanel = VRCSdkControlPanel.window;

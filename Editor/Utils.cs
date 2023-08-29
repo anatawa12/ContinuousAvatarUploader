@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -8,8 +9,83 @@ using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
+    internal static class Utils
+    {
+        public static bool ReloadDomainDisabled() =>
+            EditorSettings.enterPlayModeOptionsEnabled &&
+            (EditorSettings.enterPlayModeOptions & EnterPlayModeOptions.DisableDomainReload) != 0;
+
+        public static Task EnterPlayMode()
+        {
+            if (EditorApplication.isPlaying)
+                return Task.CompletedTask;
+            if (!ReloadDomainDisabled())
+                throw new Exception("Reload Domain is not disabled so we cannot wait for entering playmode with Task");
+            var taskCompletionSource = new TaskCompletionSource<bool>();
+
+            EditorApplication.playModeStateChanged += PlayModeStateChangeImpl;
+            EditorApplication.isPlaying = true;
+
+            return taskCompletionSource.Task;
+
+            void PlayModeStateChangeImpl(PlayModeStateChange state)
+            {
+                switch (state)
+                {
+                    case PlayModeStateChange.ExitingEditMode:
+                        break;
+                    case PlayModeStateChange.EnteredPlayMode:
+                        taskCompletionSource.SetResult(true);
+                        EditorApplication.playModeStateChanged -= PlayModeStateChangeImpl;
+                        break;
+                    case PlayModeStateChange.ExitingPlayMode:
+                        taskCompletionSource.SetException(new Exception("Entering Play mode Is Aborted"));
+                        EditorApplication.playModeStateChanged -= PlayModeStateChangeImpl;
+                        break;
+                    case PlayModeStateChange.EnteredEditMode:
+                    default:
+                        taskCompletionSource.SetException(new Exception($"Unexpected state: {state}"));
+                        EditorApplication.playModeStateChanged -= PlayModeStateChangeImpl;
+                        break;
+                }
+            }
+        }
+        
+        public static Task ExitPlayMode()
+        {
+            if (!EditorApplication.isPlayingOrWillChangePlaymode)
+                return Task.CompletedTask;
+            var taskCompletionSource = new TaskCompletionSource<bool>();
+
+            EditorApplication.playModeStateChanged += PlayModeStateChangeImpl;
+            EditorApplication.isPlaying = false;
+
+            return taskCompletionSource.Task;
+
+            void PlayModeStateChangeImpl(PlayModeStateChange state)
+            {
+                switch (state)
+                {
+                    case PlayModeStateChange.ExitingPlayMode:
+                        break;
+                    case PlayModeStateChange.EnteredEditMode:
+                        taskCompletionSource.SetResult(true);
+                        EditorApplication.playModeStateChanged -= PlayModeStateChangeImpl;
+                        break;
+                    case PlayModeStateChange.ExitingEditMode:
+                    case PlayModeStateChange.EnteredPlayMode:
+                    default:
+                        taskCompletionSource.SetException(new Exception($"Unexpected state: {state}"));
+                        EditorApplication.playModeStateChanged -= PlayModeStateChangeImpl;
+                        break;
+                }
+            }
+        }
+    }
+
     class PreventEnteringPlayModeScope : IDisposable
     {
+        private bool _disposed;
         public PreventEnteringPlayModeScope()
         {
             EditorApplication.playModeStateChanged += PlayModeChanged;
@@ -33,6 +109,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void Dispose(bool disposing)
         {
+            if (_disposed) return;
+            _disposed = true;
             EditorApplication.playModeStateChanged -= PlayModeChanged;
         }
 
@@ -55,6 +133,43 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             else
             {
                 Debug.LogError(notificationText);
+            }
+        }
+
+        public AllowPlaymodeScope AllowScope() => new AllowPlaymodeScope(this);
+
+        public class AllowPlaymodeScope : IDisposable
+        {
+            private bool _disposed;
+            private readonly PreventEnteringPlayModeScope _outer;
+
+            public AllowPlaymodeScope(PreventEnteringPlayModeScope outer)
+            {
+                _outer = outer;
+                if (_outer._disposed) throw new Exception("PreventEnteringPlayModeScope has been disposed");
+                EditorApplication.playModeStateChanged -= _outer.PlayModeChanged;
+            }
+
+            ~AllowPlaymodeScope()
+            {
+                Dispose(false);
+            }
+
+            private void Dispose(bool disposing)
+            {
+                if (_disposed) return;
+                _disposed = true;
+                if (!disposing) return;
+                if (_outer._disposed) throw new Exception("outer PreventEnteringPlayModeScope has been disposed");
+                if (EditorApplication.isPlaying)
+                    throw new Exception("Exiting AllowPlaymodeScope in playMode");
+                EditorApplication.playModeStateChanged += _outer.PlayModeChanged;
+            }
+
+            public void Dispose()
+            {
+                Dispose(true);
+                GC.SuppressFinalize(this);
             }
         }
     }

@@ -81,6 +81,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             Preferences.SleepSeconds = EditorGUILayout.FloatField(
                 new GUIContent("Sleep Seconds", "The time sleeps between upload"),
                 Preferences.SleepSeconds);
+            Preferences.TakeThumbnailInPlaymodeByDefault = EditorGUILayout.ToggleLeft(
+                new GUIContent("Take Thumbnail In PlayMode by Default", 
+                    "If this is enabled, CAU will take Thumbnail after entering PlayMode."),
+                Preferences.TakeThumbnailInPlaymodeByDefault);
 
             IVRCSdkAvatarBuilderApi builder = null;
 
@@ -91,6 +95,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var noCredentials = !VerifyCredentials(Repaint);
             var openControlPanel = !VRCSdkControlPanel.window;
             var noAvatarBuilder = !openControlPanel && !VRCSdkControlPanel.TryGetBuilder(out builder);
+            var playModeSettingsNotGood = !CheckPlaymodeSettings();
             if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptors are specified", MessageType.Error);
             if (anyNull) EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
             if (anyGroupNull) EditorGUILayout.HelpBox("Some AvatarDescriptor Group is None", MessageType.Error);
@@ -98,7 +103,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (noCredentials) EditorGUILayout.HelpBox("Please login in control panel", MessageType.Error);
             if (openControlPanel) EditorGUILayout.HelpBox("Please open Control panel", MessageType.Error);
             if (noAvatarBuilder) EditorGUILayout.HelpBox("No Valid VRCSDK Avatars Found", MessageType.Error);
-            using (new EditorGUI.DisabledScope(noDescriptors || anyNull || anyGroupNull || playMode || noCredentials || openControlPanel || noAvatarBuilder))
+            if (playModeSettingsNotGood)
+                EditorGUILayout.HelpBox(
+                    "Some avatars are going ot take thumbnail in PlayMode. " +
+                    "To take thumbnail in PlayMode, Please Disable 'Reload Domain' Option in " +
+                    "Enter Play Mode Settings in Editor in Project Settings",
+                    MessageType.Error);
+            using (new EditorGUI.DisabledScope(noDescriptors || anyNull || anyGroupNull || playMode || noCredentials || openControlPanel || noAvatarBuilder || playModeSettingsNotGood))
             {
                 if (GUILayout.Button("Start Upload"))
                     StartUpload(builder);
@@ -122,6 +133,47 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUILayout.EndScrollView();
         }
 
+        private bool CheckPlaymodeSettings()
+        {
+            if (Utils.ReloadDomainDisabled())
+                return true;
+
+            if (Preferences.TakeThumbnailInPlaymodeByDefault)
+                return false;
+
+            foreach (var avatarUploadSetting in GetUploadingAvatars())
+            {
+                var currentInfo = avatarUploadSetting.GetCurrentPlatformInfo();
+                if (currentInfo.updateImage)
+                {
+                    bool enterPlaymode;
+                    switch (currentInfo.imageTakeEditorMode)
+                    {
+                        case ImageTakeEditorMode.UseUploadGuiSetting:
+                            enterPlaymode = Preferences.TakeThumbnailInPlaymodeByDefault;
+                            break;
+                        case ImageTakeEditorMode.InEditMode:
+                            enterPlaymode = false;
+                            break;
+                        case ImageTakeEditorMode.InPlayMode:
+                            enterPlaymode = true;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    if (enterPlaymode)
+                        return false;
+                }
+            }
+
+            // there are need to disable reload domain
+            return true;
+        }
+
+        private IEnumerable<AvatarUploadSetting> GetUploadingAvatars() =>
+            avatarSettings.Concat(groups.SelectMany(x => x.avatars));
+
         private async void StartUpload(IVRCSdkAvatarBuilderApi builder)
         {
             _cancellationToken = new CancellationTokenSource();
@@ -130,10 +182,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             try
             {
                 _guiState = State.PreparingAvatar;
-                var uploadingAvatars = avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
                 await Uploader.Upload(builder,
                     sleepMilliseconds: (int)(Preferences.SleepSeconds * 1000),
-                    uploadingAvatars: uploadingAvatars,
+                    uploadingAvatars: GetUploadingAvatars(),
                     onStartUpload: avatar =>
                     {
                         _guiState = State.UploadingAvatar;

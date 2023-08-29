@@ -8,8 +8,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public static float SleepSeconds
         {
-            get => EditorPrefs.GetFloat(EditorPrefsPrefix, 3);
-            set => EditorPrefs.SetFloat(EditorPrefsPrefix, value);
+            get => EditorPrefs.GetFloat(EditorPrefsPrefix + "sleep-seconds", 3);
+            set => EditorPrefs.SetFloat(EditorPrefsPrefix + "sleep-seconds", value);
+        }
+
+        public static bool TakeThumbnailInPlaymodeByDefault
+        {
+            get => EditorPrefs.GetBool(EditorPrefsPrefix + "take-in-play", false);
+            set => EditorPrefs.SetBool(EditorPrefsPrefix + "take-in-play", value);
         }
     }
 }

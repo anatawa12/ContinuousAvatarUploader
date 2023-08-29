@@ -96,6 +96,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (info.updateImage)
                 {
                     EditorGUI.indentLevel++;
+                    info.imageTakeEditorMode = (ImageTakeEditorMode)EditorGUILayout.EnumPopup("Take Image In", info.imageTakeEditorMode);
                     EditorGUI.BeginDisabledGroup(!_cachedAvatar);
                     if (_previewCameraManager != null)
                     {
