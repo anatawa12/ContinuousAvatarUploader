@@ -181,11 +181,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [SerializeField] int sleepMilliseconds;
 
         // LOCAL VARIABLES
-        [SerializeField] string[] lastOpenedScenes;
-        [SerializeField] int processingIndex = -1;
         [SerializeField] AvatarUploadSetting uploadingAvatar;
-        [SerializeField] bool oldEnabled;
-        [SerializeField] VRCAvatarDescriptor avatarDescriptor;
 
         private async Task Upload(CancellationToken cancellationToken)
         {
@@ -199,13 +195,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (scenes.Any(x => x.isDirty))
                 EditorSceneManager.SaveOpenScenes();
             var scenePaths = scenes.Select(x => x.path).ToArray();
-            lastOpenedScenes = scenePaths.Any(string.IsNullOrEmpty) ? Array.Empty<string>() : scenePaths;
+            var lastOpenedScenes = scenePaths.Any(string.IsNullOrEmpty) ? Array.Empty<string>() : scenePaths;
 
-            for (processingIndex = 0;processingIndex < uploadingAvatars.Length; processingIndex++)
+            for (var processingIndex = 0;processingIndex < uploadingAvatars.Length; processingIndex++)
             {
                 var avatar = uploadingAvatars[processingIndex];
                 Debug.Log($"Upload started for {avatar.name}");
 
+                VRCAvatarDescriptor avatarDescriptor;
                 if (avatar.avatarDescriptor.IsAssetReference())
                 {
                     avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
@@ -237,7 +234,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 Debug.Log($"Actual avatar name: {avatarDescriptor.name}");
 
                 uploadingAvatar = avatar;
-                oldEnabled = avatarDescriptor.gameObject.activeSelf;
+                var oldEnabled = avatarDescriptor.gameObject.activeSelf;
                 avatarDescriptor.gameObject.SetActive(true);
 
                 await Task.Delay(100, cancellationToken);
@@ -300,9 +297,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         AddGitTag(tagName);
                     }
                 }
-
-                if (!avatarDescriptor)
-                    avatarDescriptor = uploadingAvatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
 
                 if (uploadingAvatar.avatarDescriptor.IsAssetReference())
                 {
