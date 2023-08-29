@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using UnityEditor;
@@ -17,12 +18,25 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public float sleepSeconds = 3;
 
         // for uploading avatars
-        [SerializeField] private UploadProcess process = new UploadProcess();
+
+        [NonSerialized] private State _guiState;
+        [NonSerialized] private AvatarUploadSetting _currentUploadingAvatar;
+        [SerializeField] private List<UploadErrorInfo> previousUploadErrors;
+        [SerializeField] private Vector2 errorsScroll;
+
+        [Serializable]
+        private struct UploadErrorInfo
+        {
+            public string message;
+            public AvatarUploadSetting uploadingAvatar;
+        }
 
         private SerializedObject _serialized;
         private SerializedProperty _avatarDescriptor;
         private SerializedProperty _groups;
         private SerializedProperty _sleepSeconds;
+
+        private CancellationTokenSource _cancellationToken;
 
         [MenuItem("Window/Continuous Avatar Uploader")]
         public static void OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
@@ -33,18 +47,27 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _avatarDescriptor = _serialized.FindProperty(nameof(avatarSettings));
             _groups = _serialized.FindProperty(nameof(groups));
             _sleepSeconds = _serialized.FindProperty(nameof(sleepSeconds));
+            VRCSdkControlPanel.OnSdkPanelEnable += OnSdkPanelEnableDisable;
+            VRCSdkControlPanel.OnSdkPanelDisable += OnSdkPanelEnableDisable;
         }
+
+        private void OnDisable()
+        {
+            VRCSdkControlPanel.OnSdkPanelEnable -= OnSdkPanelEnableDisable;
+            VRCSdkControlPanel.OnSdkPanelDisable -= OnSdkPanelEnableDisable;
+        }
+
+        private void OnSdkPanelEnableDisable(object sender, EventArgs e) => Repaint();
 
         private void OnGUI()
         {
-            var uploadInProgress = process.IsInProgress();
+            var uploadInProgress = _guiState != State.Configuring;
             if (uploadInProgress)
             {
                 GUILayout.Label("UPLOAD IN PROGRESS");
-                if (process.UploadingAvatar)
+                if (_currentUploadingAvatar)
                 {
-                    EditorGUILayout.ObjectField("Uploading", process.UploadingAvatar, typeof(AvatarUploadSetting),
-                        true);
+                    EditorGUILayout.ObjectField("Uploading", _currentUploadingAvatar, typeof(AvatarUploadSetting), true);
                 }
                 else
                 {
@@ -52,7 +75,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
 
                 if (GUILayout.Button("ABORT UPLOAD"))
-                    process.Abort();
+                    _cancellationToken?.Cancel();
             }
 
             EditorGUI.BeginDisabledGroup(uploadInProgress);
@@ -62,29 +85,100 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUILayout.PropertyField(_sleepSeconds);
             _serialized.ApplyModifiedProperties();
 
+            IVRCSdkAvatarBuilderApi builder = null;
+
             var noDescriptors = avatarSettings.Length == 0 && groups.Length == 0;
             var anyNull = avatarSettings.Any(x => !x);
             var anyGroupNull = groups.Any(x => !x);
             var playMode = !uploadInProgress && EditorApplication.isPlayingOrWillChangePlaymode;
             var noCredentials = !VerifyCredentials(Repaint);
+            var openControlPanel = !VRCSdkControlPanel.window;
+            var noAvatarBuilder = !openControlPanel && !VRCSdkControlPanel.TryGetBuilder(out builder);
             if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptors are specified", MessageType.Error);
             if (anyNull) EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
             if (anyGroupNull) EditorGUILayout.HelpBox("Some AvatarDescriptor Group is None", MessageType.Error);
             if (playMode) EditorGUILayout.HelpBox("To upload avatars, exit Play mode", MessageType.Error);
             if (noCredentials) EditorGUILayout.HelpBox("Please login in control panel", MessageType.Error);
-            using (new EditorGUI.DisabledScope(noDescriptors || anyNull || anyGroupNull || playMode || noCredentials))
+            if (openControlPanel) EditorGUILayout.HelpBox("Please open Control panel", MessageType.Error);
+            if (noAvatarBuilder) EditorGUILayout.HelpBox("No Valid VRCSDK Avatars Found", MessageType.Error);
+            using (new EditorGUI.DisabledScope(noDescriptors || anyNull || anyGroupNull || playMode || noCredentials || openControlPanel || noAvatarBuilder))
             {
                 if (GUILayout.Button("Start Upload"))
-                {
-                    var uploadingAvatars = groups.Length == 0
-                        ? avatarSettings
-                        : avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
-                    process.StartContinuousUpload((int)(sleepSeconds * 1000), uploadingAvatars);
-                    EditorUtility.SetDirty(this);
-                }
+                    StartUpload(builder);
             }
 
             EditorGUI.EndDisabledGroup();
+
+            EditorGUILayout.Space();
+            GUILayout.Label("Errors from Previous Build:", EditorStyles.boldLabel);
+            errorsScroll = EditorGUILayout.BeginScrollView(errorsScroll);
+            if (previousUploadErrors.Count == 0) GUILayout.Label("No Errors");
+            else
+            {
+                foreach (var previousUploadError in previousUploadErrors)
+                {
+                    EditorGUILayout.ObjectField("Uploading", previousUploadError.uploadingAvatar,
+                        typeof(AvatarUploadSetting), false);
+                    EditorGUILayout.TextField(previousUploadError.message);
+                }
+            }
+            EditorGUILayout.EndScrollView();
+        }
+
+        private async void StartUpload(IVRCSdkAvatarBuilderApi builder)
+        {
+            _cancellationToken = new CancellationTokenSource();
+
+            try
+            {
+                _guiState = State.PreparingAvatar;
+                var uploadingAvatars = avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
+                await Uploader.Upload(builder,
+                    sleepMilliseconds: (int)(sleepSeconds * 1000),
+                    uploadingAvatars: uploadingAvatars,
+                    onStartUpload: avatar =>
+                    {
+                        _guiState = State.UploadingAvatar;
+                        _currentUploadingAvatar = avatar;
+                    },
+                    onException: (exception, avatar) =>
+                    {
+                        previousUploadErrors.Add(new UploadErrorInfo
+                        {
+                            uploadingAvatar = avatar,
+                            message = exception.ToString()
+                        });
+                    },
+                    onFinishUpload: avatar =>
+                    {
+                        _guiState = State.UploadedAvatar;
+                        _currentUploadingAvatar = null;
+                    },
+                    cancellationToken: _cancellationToken.Token);
+            }
+            catch (OperationCanceledException c) when (c.CancellationToken == _cancellationToken.Token)
+            {
+                // cancelled
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                previousUploadErrors.Add(new UploadErrorInfo { message = exception.ToString() });
+            }
+            finally
+            {
+                _guiState = State.Configuring;
+            }
+        }
+
+        enum State
+        {
+            Configuring,
+
+            // upload avatar process
+            PreparingAvatar,
+            UploadingAvatar,
+            UploadedAvatar,
         }
 
         public static bool VerifyCredentials(Action onSuccess = null)
@@ -102,54 +196,5 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }, null);
             return APIUser.IsLoggedIn;
         }
-    }
-
-    [Serializable]
-    sealed class UploadProcess
-    {
-        public AvatarUploadSetting UploadingAvatar => uploadingAvatar;
-
-        public bool IsInProgress() => state != State.Idle;
-
-        public void Abort()
-        {
-            _cancellationToken.Cancel();
-        }
-
-        public async void StartContinuousUpload(int sleepMilliseconds, AvatarUploadSetting[] avatars)
-        {
-            if (state != State.Idle) throw new InvalidOperationException("Cannot start upload in non idle state");
-
-            if (!VRCSdkControlPanel.TryGetBuilder<IVRCSdkAvatarBuilderApi>(out var builder))
-                throw new Exception("BuilderPanel not found");
-
-            _cancellationToken = new CancellationTokenSource();
-
-            try
-            {
-                await Uploader.Upload(builder, sleepMilliseconds, avatars,
-                    onStartUpload: avatar => uploadingAvatar = avatar,
-                    onFinishUpload: avatar => uploadingAvatar = null,
-                    cancellationToken: _cancellationToken.Token);
-            }
-            catch (OperationCanceledException c) when (c.CancellationToken == _cancellationToken.Token)
-            {
-                // cancelled
-            }
-        }
-
-        enum State
-        {
-            Idle,
-            Abort,
-        }
-
-        private CancellationTokenSource _cancellationToken;
-
-        // INPUT VARIABLE
-        [SerializeField] State state;
-
-        // LOCAL VARIABLES
-        [SerializeField] AvatarUploadSetting uploadingAvatar;
     }
 }

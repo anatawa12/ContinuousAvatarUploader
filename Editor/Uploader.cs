@@ -50,10 +50,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     Debug.Log($"Upload started for {avatar.name}");
 
+                    onStartUpload?.Invoke(avatar);
+
                     using (var scope = LoadAvatar(avatar))
                     {
-                        onStartUpload?.Invoke(avatar);
-
                         try
                         {
                             await UploadAvatar(avatar, scope.AvatarDescriptor, builder, cancellationToken);
@@ -62,11 +62,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         {
                             onException(e, avatar);
                         }
-
-                        onFinishUpload?.Invoke(avatar);
-
-                        await Task.Delay(sleepMilliseconds, cancellationToken);
                     }
+
+                    onFinishUpload?.Invoke(avatar);
+
+                    await Task.Delay(sleepMilliseconds, cancellationToken);
                 }
             }
 
