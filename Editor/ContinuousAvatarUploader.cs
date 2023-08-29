@@ -169,10 +169,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         // Not workings:
-        // - update description
+        // - new avatar upload
         // - update thumbnail
         // Workings:
         // - simple upload
+        // - update description
 
         // INPUT VARIABLE
         [SerializeField] State state;
@@ -277,6 +278,28 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     throw new Exception("Uploading other user avatar.");
 
                 await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar, cancellationToken: cancellationToken);
+
+                var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
+
+                if (platformInfo.versioningEnabled)
+                {
+                    // get uploaded avatar info
+                    vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true,
+                        cancellationToken);
+
+                    // update description
+                    long versionName;
+                    (vrcAvatar.Description, versionName) =
+                        UpdateVersionName(vrcAvatar.Description, platformInfo.versionNamePrefix);
+
+                    await VRCApi.UpdateAvatarInfo(vrcAvatar.ID, vrcAvatar, cancellationToken: cancellationToken);
+
+                    if (platformInfo.gitEnabled)
+                    {
+                        var tagName = platformInfo.tagPrefix + versionName + platformInfo.tagSuffix;
+                        AddGitTag(tagName);
+                    }
+                }
 
                 if (!avatarDescriptor)
                     avatarDescriptor = uploadingAvatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
