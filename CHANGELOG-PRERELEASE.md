@@ -8,12 +8,16 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- Support for VRCSDK 3.3.0 `#18`
 
 ### Changed
+- Thumbnails are taken in EditMode by default `#18`
+    - You can change in uploader window OR for each avatars
 
 ### Deprecated
 
 ### Removed
+- Support for VRCSDK 3.2.x or older `#18`
 
 ### Fixed
 
