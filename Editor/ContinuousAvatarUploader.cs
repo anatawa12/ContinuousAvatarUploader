@@ -138,12 +138,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             state = State.Abort;
         }
 
-        public void StartContinuousUpload(int sleepMilliseconds, AvatarUploadSetting[] avatars)
+        public async void StartContinuousUpload(int sleepMilliseconds, AvatarUploadSetting[] avatars)
         {
             if (state != State.Idle) throw new InvalidOperationException("Cannot start upload in non idle state");
             uploadingAvatars = avatars;
             this.sleepMilliseconds = sleepMilliseconds;
-            state = State.StartingContinuousUpload;
+            await Upload(default);
         }
 
         public void OnEnable()
@@ -158,16 +158,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void OnUpdate()
         {
-            var oldState = state;
-            try
-            {
-            }
-            catch
-            {
-                Debug.LogError("Aborting the build process because of error.");
-                state = State.Abort;
-                throw;
-            }
         }
 
         private const string PrefabScenePath = "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity";
@@ -176,7 +166,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             Idle,
             Abort,
-            StartingContinuousUpload,
         }
 
         // Not workings:
