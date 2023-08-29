@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -172,11 +173,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         // Not workings:
-        // - new avatar upload
         // Workings:
         // - simple upload
         // - update description
         // - update thumbnail
+        // - new avatar upload
 
         // INPUT VARIABLE
         [SerializeField] State state;
@@ -234,27 +235,43 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         throw new Exception("Unknown error");
                 }
 
-                if (string.IsNullOrEmpty(vrcAvatar.ID))
-                    throw new Exception("Uploading new avatar");
+                bool uploadingNewAvatar;
 
-                if (APIUser.CurrentUser == null || vrcAvatar.AuthorId != APIUser.CurrentUser?.id)
-                    throw new Exception("Uploading other user avatar.");
+                if (string.IsNullOrEmpty(vrcAvatar.ID))
+                {
+                    uploadingNewAvatar = true;
+                    vrcAvatar = new VRCAvatar
+                    {
+                        Name = avatarDescriptor.gameObject.name,
+                        Description = "",
+                        Tags = new List<string>(),
+                        ReleaseStatus = "private",
+                    };
+                }
+                else
+                {
+                    if (APIUser.CurrentUser == null || vrcAvatar.AuthorId != APIUser.CurrentUser?.id)
+                        throw new Exception("Uploading other user avatar.");
+                    uploadingNewAvatar = false;
+                }
 
                 var platformInfo = avatar.GetCurrentPlatformInfo();
 
                 string picturePath = null;
-                if (platformInfo.updateImage)
+                if (platformInfo.updateImage || uploadingNewAvatar)
                 {
-                    picturePath = TakePicture(avatarDescriptor, 800, 600)
+                    picturePath = TakePicture(avatarDescriptor, 1200, 900);
                 }
 
-                await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar, thumbnailPath: picturePath,
-                    cancellationToken);
+                await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar,
+                    thumbnailPath: picturePath,
+                    cancellationToken: cancellationToken);
 
                 // get uploaded avatar info
-                vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true, cancellationToken);
+                vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true,
+                    cancellationToken: cancellationToken);
 
-                if (platformInfo.updateImage)
+                if (platformInfo.updateImage && !uploadingNewAvatar)
                 {
                     await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
                         cancellationToken: cancellationToken);
