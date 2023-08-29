@@ -125,6 +125,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private async void StartUpload(IVRCSdkAvatarBuilderApi builder)
         {
             _cancellationToken = new CancellationTokenSource();
+            previousUploadErrors.Clear();
 
             try
             {
