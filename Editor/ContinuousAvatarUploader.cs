@@ -220,22 +220,19 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 var pipelineManager = PreparePipelineManager(avatarDescriptor.gameObject);
 
-                VRCAvatar vrcAvatar;
+                VRCAvatar vrcAvatar = default;
                 try
                 {
                     vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, true, cancellationToken);
                 }
                 catch (ApiErrorException ex)
                 {
-                    if (ex.StatusCode == HttpStatusCode.NotFound)
-                    {
-                        throw new Exception("Uploading new avatar");
-                    }
-                    else
-                    {
+                    if (ex.StatusCode != HttpStatusCode.NotFound)
                         throw new Exception("Unknown error");
-                    }
                 }
+
+                if (string.IsNullOrEmpty(vrcAvatar.ID))
+                    throw new Exception("Uploading new avatar");
 
                 if (APIUser.CurrentUser == null || vrcAvatar.AuthorId != APIUser.CurrentUser?.id)
                     throw new Exception("Uploading other user avatar.");
