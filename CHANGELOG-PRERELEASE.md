@@ -18,8 +18,10 @@ The format is based on [Keep a Changelog].
 
 ### Removed
 - Support for VRCSDK 3.2.x or older `#18`
+- Harmony0.dll `#20`
 
 ### Fixed
+- Incompatible with tools with Harmony by removing embedded Harmony `#20`
 
 ### Security
 
