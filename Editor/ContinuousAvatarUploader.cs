@@ -76,7 +76,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUI.BeginDisabledGroup(uploadInProgress);
             _serialized.Update();
             EditorGUILayout.PropertyField(_avatarDescriptor);
+            if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect()), "Clear Avatars"))
+                _avatarDescriptor.arraySize = 0;
             EditorGUILayout.PropertyField(_groups);
+            if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect()), "Clear Groups"))
+                _groups.arraySize = 0;
             _serialized.ApplyModifiedProperties();
             Preferences.SleepSeconds = EditorGUILayout.FloatField(
                 new GUIContent("Sleep Seconds", "The time sleeps between upload"),
