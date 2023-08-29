@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -6,6 +7,36 @@ using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
+    class OpeningSceneRestoreScope : IDisposable
+    {
+        private readonly string[] _lastOpenedScenes;
+
+        public OpeningSceneRestoreScope()
+        {
+            var scenes = Enumerable.Range(0, SceneManager.sceneCount)
+                .Select(SceneManager.GetSceneAt)
+                .ToArray();
+            if (scenes.Any(x => x.isDirty))
+                EditorSceneManager.SaveOpenScenes();
+            var scenePaths = scenes.Select(x => x.path).ToArray();
+            _lastOpenedScenes = scenePaths.Any(string.IsNullOrEmpty) ? Array.Empty<string>() : scenePaths;
+        }
+
+        public void Dispose()
+        {
+            if (_lastOpenedScenes.Length == 0)
+            {
+                EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+            }
+            else
+            {
+                EditorSceneManager.OpenScene(_lastOpenedScenes[0]);
+                foreach (var lastOpenedScene in _lastOpenedScenes.Skip(1))
+                    EditorSceneManager.OpenScene(lastOpenedScene, OpenSceneMode.Additive);
+            }
+        }
+    }
+
     struct DestroyLater<T> : IDisposable where T : Object
     {
         public T Value;
