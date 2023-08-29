@@ -145,9 +145,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public async void StartContinuousUpload(int sleepMilliseconds, AvatarUploadSetting[] avatars)
         {
             if (state != State.Idle) throw new InvalidOperationException("Cannot start upload in non idle state");
-            uploadingAvatars = avatars;
-            this.sleepMilliseconds = sleepMilliseconds;
-            await Upload(default);
+            await Upload(sleepMilliseconds, avatars, cancellationToken: default);
         }
 
         public void OnEnable()
@@ -181,13 +179,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         // INPUT VARIABLE
         [SerializeField] State state;
-        [SerializeField] AvatarUploadSetting[] uploadingAvatars = Array.Empty<AvatarUploadSetting>();
-        [SerializeField] int sleepMilliseconds;
 
         // LOCAL VARIABLES
         [SerializeField] AvatarUploadSetting uploadingAvatar;
 
-        private async Task Upload(CancellationToken cancellationToken)
+        private async Task Upload(
+            int sleepMilliseconds,
+            AvatarUploadSetting[] uploadingAvatars,
+            CancellationToken cancellationToken = default
+        )
         {
             VRCSdkControlPanel.TryGetBuilder<IVRCSdkAvatarBuilderApi>(out var builder);
             if (EditorApplication.isPlaying) throw new Exception("Playmode"); // TODO
@@ -201,7 +201,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var scenePaths = scenes.Select(x => x.path).ToArray();
             var lastOpenedScenes = scenePaths.Any(string.IsNullOrEmpty) ? Array.Empty<string>() : scenePaths;
 
-            for (var processingIndex = 0;processingIndex < uploadingAvatars.Length; processingIndex++)
+            for (var processingIndex = 0; processingIndex < uploadingAvatars.Length; processingIndex++)
             {
                 var avatar = uploadingAvatars[processingIndex];
                 Debug.Log($"Upload started for {avatar.name}");
