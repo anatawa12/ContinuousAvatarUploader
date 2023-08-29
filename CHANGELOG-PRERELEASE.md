@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog].
 ## [Unreleased]
 ### Added
 - Support for VRCSDK 3.3.0 `#18`
+- Option to show dialog when uploading finished `#21`
 
 ### Changed
 - Thumbnails are taken in EditMode by default `#18`

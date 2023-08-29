@@ -17,5 +17,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             get => EditorPrefs.GetBool(EditorPrefsPrefix + "take-in-play", false);
             set => EditorPrefs.SetBool(EditorPrefsPrefix + "take-in-play", value);
         }
+
+        public static bool ShowDialogWhenUploadFinished
+        {
+            get => EditorPrefs.GetBool(EditorPrefsPrefix + "dialog-when-finish", true);
+            set => EditorPrefs.SetBool(EditorPrefsPrefix + "dialog-when-finish", value);
+        }
     }
 }
