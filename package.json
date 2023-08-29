@@ -1,6 +1,6 @@
 {
   "name": "com.anatawa12.continuous-avatar-uploader",
-  "version": "0.1.1-beta.0",
+  "version": "0.2.0-beta.0",
   "unity": "2019.4",
   "description": "The tool to upload multiple avatars continuously with tagging version",
   "displayName": "Continuous Avatar Uploader",
@@ -11,6 +11,6 @@
   "url": "https://github.com/anatawa12/ContinuousAvatarUploader",
   "repo": "https://vpm.anatawa12.com/vpm.json",
   "vpmDependencies": {
-    "com.vrchat.avatars": ">=3.3.0 <3.4.0"
+    "com.vrchat.avatars": ">=3.3.0-beta.1 <3.4.0"
   }
 }
