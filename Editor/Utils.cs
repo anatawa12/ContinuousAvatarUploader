@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,6 +8,57 @@ using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
+    class PreventEnteringPlayModeScope : IDisposable
+    {
+        public PreventEnteringPlayModeScope()
+        {
+            EditorApplication.playModeStateChanged += PlayModeChanged;
+        }
+
+        private void PlayModeChanged(PlayModeStateChange change)
+        {
+            // if EditorApplication.isPlayingOrWillChangePlaymode is false, entering play mode is already cancelled
+            if (change == PlayModeStateChange.ExitingEditMode && EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                EditorApplication.isPlaying = false;
+                ShowNotification(
+                    "entering play mode is not allowed while uploading avatars with the Continuous Avatar Uploader.");
+            }
+        }
+
+        ~PreventEnteringPlayModeScope()
+        {
+            Dispose(false);
+        }
+
+        private void Dispose(bool disposing)
+        {
+            EditorApplication.playModeStateChanged -= PlayModeChanged;
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        private static void ShowNotification(string notificationText)
+        {
+            var notificationViews = Resources.FindObjectsOfTypeAll<SceneView>();
+
+            if (notificationViews.Length > 0)
+            {
+                var content = new GUIContent(notificationText);
+                foreach (var notificationView in notificationViews)
+                    notificationView.ShowNotification(content);
+            }
+            else
+            {
+                Debug.LogError(notificationText);
+            }
+        }
+    }
+
     class OpeningSceneRestoreScope : IDisposable
     {
         private readonly string[] _lastOpenedScenes;

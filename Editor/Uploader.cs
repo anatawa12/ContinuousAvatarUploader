@@ -76,6 +76,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (onException == null) onException = Debug.LogException;
 
             AssetDatabase.SaveAssets();
+            using (new PreventEnteringPlayModeScope())
             using (new OpeningSceneRestoreScope())
             {
                 foreach (var avatar in uploadingAvatars)
