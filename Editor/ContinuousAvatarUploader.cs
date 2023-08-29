@@ -14,9 +14,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [SerializeField] AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
         [SerializeField] AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
 
-        [Tooltip("The time sleeps between upload")] [SerializeField]
-        public float sleepSeconds = 3;
-
         // for uploading avatars
 
         [NonSerialized] private State _guiState;
@@ -34,7 +31,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private SerializedObject _serialized;
         private SerializedProperty _avatarDescriptor;
         private SerializedProperty _groups;
-        private SerializedProperty _sleepSeconds;
 
         private CancellationTokenSource _cancellationToken;
 
@@ -46,7 +42,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _serialized = new SerializedObject(this);
             _avatarDescriptor = _serialized.FindProperty(nameof(avatarSettings));
             _groups = _serialized.FindProperty(nameof(groups));
-            _sleepSeconds = _serialized.FindProperty(nameof(sleepSeconds));
             VRCSdkControlPanel.OnSdkPanelEnable += OnSdkPanelEnableDisable;
             VRCSdkControlPanel.OnSdkPanelDisable += OnSdkPanelEnableDisable;
         }
@@ -82,8 +77,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _serialized.Update();
             EditorGUILayout.PropertyField(_avatarDescriptor);
             EditorGUILayout.PropertyField(_groups);
-            EditorGUILayout.PropertyField(_sleepSeconds);
             _serialized.ApplyModifiedProperties();
+            Preferences.SleepSeconds = EditorGUILayout.FloatField(
+                new GUIContent("Sleep Seconds", "The time sleeps between upload"),
+                Preferences.SleepSeconds);
 
             IVRCSdkAvatarBuilderApi builder = null;
 
@@ -134,7 +131,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 _guiState = State.PreparingAvatar;
                 var uploadingAvatars = avatarSettings.Concat(groups.SelectMany(x => x.avatars)).ToArray();
                 await Uploader.Upload(builder,
-                    sleepMilliseconds: (int)(sleepSeconds * 1000),
+                    sleepMilliseconds: (int)(Preferences.SleepSeconds * 1000),
                     uploadingAvatars: uploadingAvatars,
                     onStartUpload: avatar =>
                     {
