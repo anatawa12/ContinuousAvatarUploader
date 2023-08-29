@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -9,10 +10,12 @@ using System.Threading.Tasks;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 using UnityEngine.SceneManagement;
 using VRC.Core;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3A.Editor;
+using VRC.SDKBase;
 using VRC.SDKBase.Editor;
 using VRC.SDKBase.Editor.Api;
 using Debug = UnityEngine.Debug;
@@ -170,10 +173,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         // Not workings:
         // - new avatar upload
-        // - update thumbnail
         // Workings:
         // - simple upload
         // - update description
+        // - update thumbnail
 
         // INPUT VARIABLE
         [SerializeField] State state;
@@ -237,16 +240,28 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (APIUser.CurrentUser == null || vrcAvatar.AuthorId != APIUser.CurrentUser?.id)
                     throw new Exception("Uploading other user avatar.");
 
-                await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar, cancellationToken: cancellationToken);
-
                 var platformInfo = avatar.GetCurrentPlatformInfo();
+
+                string picturePath = null;
+                if (platformInfo.updateImage)
+                {
+                    picturePath = TakePicture(avatarDescriptor, 800, 600)
+                }
+
+                await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar, thumbnailPath: picturePath,
+                    cancellationToken);
+
+                // get uploaded avatar info
+                vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true, cancellationToken);
+
+                if (platformInfo.updateImage)
+                {
+                    await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
+                        cancellationToken: cancellationToken);
+                }
 
                 if (platformInfo.versioningEnabled)
                 {
-                    // get uploaded avatar info
-                    vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true,
-                        cancellationToken);
-
                     // update description
                     long versionName;
                     (vrcAvatar.Description, versionName) =
@@ -333,6 +348,62 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             return pipelineManager;
+        }
+
+        private string TakePicture(VRC_AvatarDescriptor cachedAvatar, int width, int height)
+        {
+            using (var previewSceneScope = PreviewSceneScope.Create(EditorUtility.IsPersistent(cachedAvatar)))
+            {
+                if (EditorUtility.IsPersistent(cachedAvatar))
+                {
+                    PrefabUtility.LoadPrefabContentsIntoPreviewScene(
+                        AssetDatabase.GetAssetPath(cachedAvatar), previewSceneScope.Scene);
+                }
+
+                using (var cameraGameObject = new DestroyLater<GameObject>(EditorUtility.CreateGameObjectWithHideFlags(
+                           "Take Picture Camera", HideFlags.DontSave,
+                           typeof(Camera))))
+                {
+                    var camera = cameraGameObject.Value.GetComponent<Camera>();
+                    camera.enabled = false;
+                    camera.cullingMask = unchecked((int)0xFFFFFFDF);
+                    camera.nearClipPlane = 0.01f;
+                    camera.farClipPlane = 100f;
+                    camera.allowHDR = false;
+                    camera.scene = previewSceneScope.Scene.IsValid()
+                        ? previewSceneScope.Scene
+                        : cachedAvatar.gameObject.scene;
+                    cachedAvatar.PositionPortraitCamera(camera.transform);
+                    EditorApplication.update += OnUpdate;
+                    Selection.objects = new Object[] { camera.gameObject };
+
+
+                    using (var previewTexture = new DestroyLater<RenderTexture>(
+                               new RenderTexture(width, height, 24, GraphicsFormat.R8G8B8A8_SRGB)
+                                   { antiAliasing = Mathf.Max(1, QualitySettings.antiAliasing) }))
+                    {
+                        camera.targetTexture = previewTexture.Value;
+                        camera.pixelRect = new Rect(0, 0, width, height);
+                        camera.Render();
+
+                        using (var tex = new DestroyLater<Texture2D>(new Texture2D(width, height, TextureFormat.RGBA32,
+                                   0,
+                                   false)))
+                        {
+                            using (new ActiveRenderTextureScope(previewTexture.Value))
+                            {
+                                RenderTexture.active = previewTexture.Value;
+                                tex.Value.ReadPixels(new Rect(0, 0, width, height), 0, 0, false);
+                                tex.Value.Apply(false);
+                            }
+
+                            var path = Path.Combine(Path.GetTempPath(), "picture-" + Guid.NewGuid() + ".png");
+                            System.IO.File.WriteAllBytes(path, tex.Value.EncodeToPNG());
+                            return path;
+                        }
+                    }
+                }
+            }
         }
 
         private State Sleep(int milliseconds, State nextState)
