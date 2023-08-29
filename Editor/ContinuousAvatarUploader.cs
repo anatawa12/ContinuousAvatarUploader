@@ -116,7 +116,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     EditorGUILayout.ObjectField("Uploading", previousUploadError.uploadingAvatar,
                         typeof(AvatarUploadSetting), false);
-                    EditorGUILayout.TextField(previousUploadError.message);
+                    EditorGUILayout.TextArea(previousUploadError.message);
                 }
             }
             EditorGUILayout.EndScrollView();
