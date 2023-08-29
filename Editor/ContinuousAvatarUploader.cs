@@ -202,28 +202,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 var avatar = uploadingAvatars[processingIndex];
                 Debug.Log($"Upload started for {avatar.name}");
 
-                VRCAvatarDescriptor avatarDescriptor;
-                if (avatar.avatarDescriptor.IsAssetReference())
-                {
-                    avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
-                    if (avatarDescriptor)
-                    {
-                        var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
-                        var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
-                        avatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
-                        EditorSceneManager.SaveScene(scene, PrefabScenePath);
-                    }
-                }
-                else
-                {
-                    // reference to scene
-                    avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-                    if (!avatarDescriptor)
-                    {
-                        avatar.avatarDescriptor.OpenScene();
-                        avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-                    }
-                }
+                var avatarDescriptor = LoadAvatar(avatar);
 
                 if (!avatarDescriptor)
                 {
@@ -239,20 +218,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 await Task.Delay(100, cancellationToken);
 
-                // pipelineManager.AssignId() doesn't mark pipeline manager dirty
-                var pipelineManager = avatarDescriptor.gameObject.GetComponent<PipelineManager>();
-                if (!pipelineManager)
-                    pipelineManager = avatarDescriptor.gameObject.AddComponent<PipelineManager>();
-                if (pipelineManager && string.IsNullOrEmpty(pipelineManager.blueprintId))
-                {
-                    pipelineManager.AssignId();
-                    EditorUtility.SetDirty(pipelineManager);
-                    EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
-                }
-
-                var creatingNewAvatar = string.IsNullOrWhiteSpace(pipelineManager.blueprintId);
-                if (creatingNewAvatar)
-                    throw new Exception("New Avatar Upload not supported yet");
+                var pipelineManager = PreparePipelineManager(avatarDescriptor.gameObject);
 
                 VRCAvatar vrcAvatar;
                 try
@@ -276,7 +242,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar, cancellationToken: cancellationToken);
 
-                var platformInfo = uploadingAvatar.GetCurrentPlatformInfo();
+                var platformInfo = avatar.GetCurrentPlatformInfo();
 
                 if (platformInfo.versioningEnabled)
                 {
@@ -303,7 +269,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     EditorSceneManager.NewScene(NewSceneSetup.EmptyScene); // without saving anything
                     AssetDatabase.DeleteAsset(PrefabScenePath);
                 }
-                else if (avatarDescriptor)
+                else
                 {
                     avatarDescriptor.gameObject.gameObject.SetActive(oldEnabled);
                 }
@@ -324,6 +290,52 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             AssetDatabase.DeleteAsset(PrefabScenePath);
+        }
+
+        private VRCAvatarDescriptor LoadAvatar(AvatarUploadSetting avatar)
+        {
+            VRCAvatarDescriptor avatarDescriptor;
+
+            if (avatar.avatarDescriptor.IsAssetReference())
+            {
+                avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
+                if (avatarDescriptor)
+                {
+                    var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
+                    var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
+                    avatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
+                    EditorSceneManager.SaveScene(scene, PrefabScenePath);
+                }
+            }
+            else
+            {
+                // reference to scene
+                avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+                if (!avatarDescriptor)
+                {
+                    avatar.avatarDescriptor.OpenScene();
+                    avatarDescriptor = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+                }
+            }
+
+            return avatarDescriptor;
+        }
+
+        private PipelineManager PreparePipelineManager(GameObject gameObject)
+        {
+            var pipelineManager = gameObject.GetComponent<PipelineManager>();
+            if (!pipelineManager)
+                pipelineManager = gameObject.AddComponent<PipelineManager>();
+
+            if (string.IsNullOrEmpty(pipelineManager.blueprintId))
+            {
+                // pipelineManager.AssignId() doesn't mark pipeline manager dirty
+                pipelineManager.AssignId();
+                EditorUtility.SetDirty(pipelineManager);
+                EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
+            }
+
+            return pipelineManager;
         }
 
         private State Sleep(int milliseconds, State nextState)
