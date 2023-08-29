@@ -11,6 +11,6 @@
   "url": "https://github.com/anatawa12/ContinuousAvatarUploader",
   "repo": "https://vpm.anatawa12.com/vpm.json",
   "vpmDependencies": {
-    "com.vrchat.avatars": ">=3.1.10 <4.0.0"
+    "com.vrchat.avatars": ">=3.3.0 <3.4.0"
   }
 }
