@@ -28,6 +28,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         private const string PrefabScenePath = "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity";
 
+        private static readonly SemaphoreSlim GlobalSemaphore = new SemaphoreSlim(1, 1);
+
         public static async Task Upload(
             IVRCSdkAvatarBuilderApi builder,
             int sleepMilliseconds,
@@ -41,6 +43,36 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (EditorApplication.isPlaying) throw new Exception("Playmode"); // TODO
             if (builder.UploadState != SdkUploadState.Idle) throw new Exception("Invalid State"); // TODO
 
+            var gotLock = false;
+            try
+            {
+                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
+                // Since timeout 0 means will not block the thread.
+                gotLock = GlobalSemaphore.Wait(0);
+                if (!gotLock) throw new Exception("Upload in progress");
+
+                await UploadImpl(builder, sleepMilliseconds, uploadingAvatars, onStartUpload, onFinishUpload,
+                    onException, cancellationToken);
+            }
+            finally
+            {
+                if (gotLock)
+                {
+                    GlobalSemaphore.Release();
+                }
+            }
+        }
+
+        private static async Task UploadImpl(
+            IVRCSdkAvatarBuilderApi builder,
+            int sleepMilliseconds,
+            IEnumerable<AvatarUploadSetting> uploadingAvatars,
+            Action<AvatarUploadSetting> onStartUpload,
+            Action<AvatarUploadSetting> onFinishUpload,
+            Action<Exception, AvatarUploadSetting> onException,
+            CancellationToken cancellationToken
+        )
+        {
             if (onException == null) onException = Debug.LogException;
 
             AssetDatabase.SaveAssets();
