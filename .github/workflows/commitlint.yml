@@ -5,4 +5,4 @@ jobs:
   check-conventional-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: anatawa12/sh-actions/conventional-commitlint@add-conventional-commitlint 
+      - uses: anatawa12/sh-actions/conventional-commitlint@master
