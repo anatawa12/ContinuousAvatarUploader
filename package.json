@@ -1,6 +1,6 @@
 {
   "name": "com.anatawa12.continuous-avatar-uploader",
-  "version": "0.2.0-beta.1",
+  "version": "0.2.0-beta.2",
   "unity": "2019.4",
   "description": "The tool to upload multiple avatars continuously with tagging version",
   "displayName": "Continuous Avatar Uploader",
