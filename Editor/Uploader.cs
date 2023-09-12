@@ -41,7 +41,16 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         )
         {
             if (EditorApplication.isPlaying) throw new Exception("Playmode"); // TODO
-            if (builder.UploadState == SdkUploadState.Uploading) throw new Exception("Invalid State"); // TODO
+            switch (builder.UploadState)
+            {
+                case SdkUploadState.Idle:
+                case SdkUploadState.Failure:
+                    break;
+                case SdkUploadState.Success:
+                case SdkUploadState.Uploading:
+                default:
+                    throw new Exception("Invalid State");
+            }
 
             var gotLock = false;
             try
