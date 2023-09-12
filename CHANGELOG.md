@@ -8,23 +8,32 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
-- Support for VRCSDK 3.3.0 `#18`
-- Option to show dialog when uploading finished `#21`
 
 ### Changed
-- Thumbnails are taken in EditMode by default `#18`
-  - You can change in uploader window OR for each avatars
 
 ### Deprecated
 
 ### Removed
-- Support for VRCSDK 3.2.x or older `#18`
-- Harmony0.dll `#20`
 
 ### Fixed
-- Incompatible with tools with Harmony by removing embedded Harmony `#20`
 
 ### Security
+
+## [0.2.0] - 2023-09-12
+### Added
+- Support for VRCSDK 3.3.0 [`#18`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/18)
+- Option to show dialog when uploading finished [`#21`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/21)
+
+### Changed
+- Thumbnails are taken in EditMode by default [`#18`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/18)
+  - You can change in uploader window OR for each avatars
+
+### Removed
+- Support for VRCSDK 3.2.x or older [`#18`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/18)
+- Harmony0.dll [`#20`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/20)
+
+### Fixed
+- Incompatible with tools with Harmony by removing embedded Harmony [`#20`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/20)
 
 ## [0.1.0] - 2023-06-01
 ### Added
@@ -56,7 +65,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.3...v0.1.0
 [0.0.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.0.1...v0.0.2
