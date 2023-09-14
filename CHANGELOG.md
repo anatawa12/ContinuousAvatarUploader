@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+ - Fixed an issue where the GUI was not rendering well when never built. [`#25`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/25)
 
 ### Security
 
