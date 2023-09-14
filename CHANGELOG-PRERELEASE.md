@@ -16,9 +16,12 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
- - Fixed an issue where the GUI was not rendering well when never built. [`#25`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/25)
 
 ### Security
+
+## [0.2.1] - 2023-09-14
+### Fixed
+ - Fixed an issue where the GUI was not rendering well when never built. [`#25`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/25)
 
 ## [0.2.0] - 2023-09-12
 ## [0.2.0-beta.2] - 2023-09-01
@@ -72,7 +75,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.0-beta.2...v0.2.0
 [0.2.0-beta.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.0-beta.1...v0.2.0-beta.2
 [0.2.0-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0...v0.2.0-beta.1
