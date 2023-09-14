@@ -18,7 +18,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         [NonSerialized] private State _guiState;
         [NonSerialized] private AvatarUploadSetting _currentUploadingAvatar;
-        [SerializeField] private List<UploadErrorInfo> previousUploadErrors;
+        [SerializeField] private List<UploadErrorInfo> previousUploadErrors = new List<UploadErrorInfo>();
         [SerializeField] private Vector2 errorsScroll;
 
         [Serializable]
