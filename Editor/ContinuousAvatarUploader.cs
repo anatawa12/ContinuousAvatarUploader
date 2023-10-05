@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
 using VRC.Core;
@@ -11,8 +12,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     public class ContinuousAvatarUploader : EditorWindow
     {
-        [SerializeField] AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
-        [SerializeField] AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
+        [SerializeField] [ItemCanBeNull] [NotNull] AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
+        [SerializeField] [ItemCanBeNull] [NotNull] AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
 
         // for uploading avatars
 
@@ -180,7 +181,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         private IEnumerable<AvatarUploadSetting> GetUploadingAvatars() =>
-            avatarSettings.Concat(groups.SelectMany(x => x.avatars));
+            avatarSettings.Concat(groups.SelectMany(x =>
+                x != null ? x.avatars : Array.Empty<AvatarUploadSetting>()));
 
         private async void StartUpload(IVRCSdkAvatarBuilderApi builder)
         {
