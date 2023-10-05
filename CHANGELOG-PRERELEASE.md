@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Null Reference Exception with None AvatarGroup(s) on the window `#27`
 
 ### Security
 
