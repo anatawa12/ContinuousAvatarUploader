@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog].
 
 ### Security
 
+## [0.2.3] - 2023-10-08
 ## [0.2.2] - 2023-10-05
 ### Fixed
 - Null Reference Exception with None AvatarGroup(s) on the window [`#27`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/27)
@@ -73,7 +74,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.1.0...v0.2.0
