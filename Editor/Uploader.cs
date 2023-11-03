@@ -92,6 +92,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     Debug.Log($"Upload started for {avatar.name}");
 
+                    if (!avatar.GetCurrentPlatformInfo().enabled)
+                    {
+                        Debug.Log($"Uploading avatar for {avatar.name} is disabled for current platform");
+                        continue;
+                    }
+
                     onStartUpload?.Invoke(avatar);
 
                     using (var scope = LoadAvatar(avatar))
