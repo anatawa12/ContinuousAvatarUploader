@@ -34,6 +34,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private SerializedProperty _groups;
 
         private CancellationTokenSource _cancellationToken;
+        private IVRCSdkAvatarBuilderApi _builder = null;
 
         [MenuItem("Window/Continuous Avatar Uploader")]
         public static void OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
@@ -95,15 +96,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     "If this is enabled, CAU will tell you upload finished."),
                 Preferences.ShowDialogWhenUploadFinished);
 
-            IVRCSdkAvatarBuilderApi builder = null;
-
             var noDescriptors = avatarSettings.Length == 0 && groups.Length == 0;
             var anyNull = avatarSettings.Any(x => !x);
             var anyGroupNull = groups.Any(x => !x);
             var playMode = !uploadInProgress && EditorApplication.isPlayingOrWillChangePlaymode;
             var noCredentials = !VerifyCredentials(Repaint);
             var openControlPanel = !VRCSdkControlPanel.window;
-            var noAvatarBuilder = !openControlPanel && !VRCSdkControlPanel.TryGetBuilder(out builder);
+            var noAvatarBuilder = !openControlPanel && _builder == null && !VRCSdkControlPanel.TryGetBuilder(out _builder);
             var playModeSettingsNotGood = !CheckPlaymodeSettings();
             if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptors are specified", MessageType.Error);
             if (anyNull) EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
@@ -121,7 +120,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             using (new EditorGUI.DisabledScope(noDescriptors || anyNull || anyGroupNull || playMode || noCredentials || openControlPanel || noAvatarBuilder || playModeSettingsNotGood))
             {
                 if (GUILayout.Button("Start Upload"))
-                    StartUpload(builder);
+                    StartUpload(_builder);
             }
 
             EditorGUI.EndDisabledGroup();

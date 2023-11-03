@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Disabling for platform is not working `#29`
 
 ### Security
 
