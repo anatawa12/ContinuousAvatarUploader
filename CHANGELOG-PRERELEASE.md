@@ -16,9 +16,12 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- use name instead of GUID in asmdef `#30`
 
 ### Security
+
+## [0.2.5] - 2023-11-14
+### Fixed
+- use name instead of GUID in asmdef [`#30`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/30)
 
 ## [0.2.4] - 2023-11-03
 ### Fixed
@@ -85,7 +88,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.4...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.5...HEAD
+[0.2.5]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.1...v0.2.2
