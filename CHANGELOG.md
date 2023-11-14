@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- use name instead of GUID in asmdef `#30`
 
 ### Security
 
