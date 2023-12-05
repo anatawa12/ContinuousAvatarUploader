@@ -7,7 +7,7 @@
 - [x] 複数のアバターを連続的にアップロードする
 - [x] アバターの説明をバージョン名に合わせて更新する。例えば `(v1)` -> `(v2)` のような形で。
 - [x] 設定可能な前置詞/後置詞をつけてgitのtag付を自動的に行う
-- [ ] ~~Automatically switch target platform and branch depends on platform (e.g. for quest, `quest-master` and for PC, `master` branch.)~~
+- [ ] ~~Automatically switch target platform and branch depends on platform (e.g. for quest, `quest-master` and for PC, `master` branch.)~~ (not planned)
 
 ## インストール方法
 
@@ -20,23 +20,23 @@
 
 ### 1 アバターを設定する
 
-アップロードするアバターの設定を作ります。
-複数のアバターをまとめて`Avatar Descriptor Group`を作成することも、一つの`Avatar Descriptor`で一つのファイルにすることもできます。
+アップロードするアバターの設定ファイルを作ります。
+`Avatar Upload Setting Group`で複数のアバターの設定を一つのファイルに纏めるか、`Avatar Upload Setting`でアバターごとにファイルを別にすることができます。\
 
-どちらを作成する場合もProjectウィンドウ内で右クリックから`Create/Avatar Descriptor`または`Create/Avatar Descriptor Group`を選択してください。
+設定ファイルを作成するにはProjectウィンドウ内で右クリックし、`Create/Avatar Upload Setting`、または`Create/Avatar Upload Setting Group`を選択してください。
 
-`Avatar Descriptor`の場合はSet Avatarの欄にHierarchyからアバターをドラック&ドロップしてそのAvatar Descriptorに紐付けてください。
+`Avatar Upload Setting`ファイルは、そのInspectorのSet Avatarの欄にアバターをHierarchyからドラッグ&ドロップすることでアバターと紐付けることが出来ます。
 
-`Avatar Descriptor Group`の場合はAvatar to Addの欄にHierarchyからアバターをドラック&ドロップしてAdd Avatarを押すことでアバターをAvatar Descriptor Groupに追加してください。
+`Avatar Upload Setting Group`ファイルは、そのInspectorのAvatar to Addの欄にアバターをHierarchyからドラッグ&ドロップして、Add Avatarを押すことでアバターと紐付けることが出来ます。
 
-次にそれそれのアバターの設定を行います。これはどちらでも共通です。
+次にそれそれのアバターの設定を行います。これはどちらのファイルでも共通です。
 
 <!-- override blueprintの設定欄の話は多分ここ -->
 
-２つのチェックボックスはそれぞれアバターを各プラットフォーム向けビルドでビルドするかを選択します。
-ここでチェックされていないアバターはアップロードされません。
+二つのチェックボックスは、アバターを各プラットフォーム向けにビルドするかどうかの選択です。
+チェックされていないプラットフォーム向けにはアバターのアップロードが行われません。
 
-それぞれのプラットフォームごとにContinuous Avatar Uploaderの補助機能をon/offできます。
+各プラットフォーム向けビルドについて、Continuous Avatar Uploaderの補助機能は個別にon/offすることが出来ます。
 
 #### Versioning System
 
@@ -50,6 +50,7 @@ tagには自由な接頭辞/接尾辞を指定できます
 ### 2 アップロードする
 
 1. `Window/Continuous Avatar Uploader`からContinuous Avatar Uploaderを開きます。
-2. Avatar DescriptorまたはAvatar Descriptor Groupを指定します。Groupを指定した場合、そのグループの中のすべてのアバターがアップロードされます。
-   Avatar Descriptor Groupの中の各アバターをAvatar Descriptorに指定することもできます。
+2. ウィンドウにAvatar Upload SettingまたはAvatar Upload Setting Groupを指定します。
+   Groupを指定した場合、そのグループの中のすべてのアバターがアップロードされます。
+   Avatar Upload Setting Groupの中のAvatar Upload Settingを個別にAvatar Upload Setting欄に指定することもできます。
 3. Start Uploadをクリックします。
