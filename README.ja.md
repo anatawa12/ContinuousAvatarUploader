@@ -20,16 +20,16 @@
 
 ### 1 アバターを設定する
 
-アップロードするアバターの設定を作ります。
-複数のアバターをまとめて`Avatar Upload Setting Group`を作成することも、一つの`Avatar Upload Setting`で一つのファイルにすることもできます。
+アップロードするアバターの設定ファイルを作ります。
+`Avatar Upload Setting Group`で複数のアバターの設定を一つのファイルに纏めるか、`Avatar Upload Setting`でアバターごとにファイルを別にすることができます。\
 
-どちらを作成する場合もProjectウィンドウ内で右クリックから`Create/Avatar Upload Setting`または`Create/Avatar Upload Setting Group`を選択してください。
+設定ファイルを作成するにはProjectウィンドウ内で右クリックし、`Create/Avatar Upload Setting`、または`Create/Avatar Upload Setting Group`を選択してください。
 
-`Avatar Upload Setting`の場合はInspectorのSet Avatarの欄にHierarchyからアバターをドラック&ドロップしてそのAvatar Upload Settingに紐付けてください。
+`Avatar Upload Setting`ファイルは、そのInspectorのSet Avatarの欄にアバターをHierarchyからドラッグ&ドロップすることでアバターと紐付けることが出来ます。
 
-`Avatar Upload Setting Group`の場合はInspectorのAvatar to Addの欄にHierarchyからアバターをドラック&ドロップしてAdd Avatarを押してアバターをAvatar Upload Setting Groupに追加してください。
+`Avatar Upload Setting Group`ファイルは、そのInspectorのAvatar to Addの欄にアバターをHierarchyからドラッグ&ドロップして、Add Avatarを押すことでアバターと紐付けることが出来ます。
 
-次にそれそれのアバターの設定を行います。これはどちらでも共通です。
+次にそれそれのアバターの設定を行います。これはどちらのファイルでも共通です。
 
 <!-- override blueprintの設定欄の話は多分ここ -->
 
