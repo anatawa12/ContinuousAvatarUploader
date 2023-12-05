@@ -21,13 +21,13 @@
 ### 1 アバターを設定する
 
 アップロードするアバターの設定を作ります。
-複数のアバターをまとめて`Avatar Descriptor Group`を作成することも、一つの`Avatar Descriptor`で一つのファイルにすることもできます。
+複数のアバターをまとめて`Avatar Upload Setting Group`を作成することも、一つの`Avatar Upload Setting`で一つのファイルにすることもできます。
 
-どちらを作成する場合もProjectウィンドウ内で右クリックから`Create/Avatar Descriptor`または`Create/Avatar Descriptor Group`を選択してください。
+どちらを作成する場合もProjectウィンドウ内で右クリックから`Create/Avatar Upload Setting`または`Create/Avatar Upload Setting Group`を選択してください。
 
-`Avatar Descriptor`の場合はSet Avatarの欄にHierarchyからアバターをドラック&ドロップしてそのAvatar Descriptorに紐付けてください。
+`Avatar Upload Setting`の場合はSet Avatarの欄にHierarchyからアバターをドラック&ドロップしてそのAvatar Upload Settingに紐付けてください。
 
-`Avatar Descriptor Group`の場合はAvatar to Addの欄にHierarchyからアバターをドラック&ドロップしてAdd Avatarを押すことでアバターをAvatar Descriptor Groupに追加してください。
+`Avatar Upload Setting Group`の場合はAvatar to Addの欄にHierarchyからアバターをドラック&ドロップしてAdd Avatarを押すことでアバターをAvatar Upload Setting Groupに追加してください。
 
 次にそれそれのアバターの設定を行います。これはどちらでも共通です。
 
@@ -50,6 +50,6 @@ tagには自由な接頭辞/接尾辞を指定できます
 ### 2 アップロードする
 
 1. `Window/Continuous Avatar Uploader`からContinuous Avatar Uploaderを開きます。
-2. Avatar DescriptorまたはAvatar Descriptor Groupを指定します。Groupを指定した場合、そのグループの中のすべてのアバターがアップロードされます。
-   Avatar Descriptor Groupの中の各アバターをAvatar Descriptorに指定することもできます。
+2. Avatar Upload SettingまたはAvatar Upload Setting Groupを指定します。Groupを指定した場合、そのグループの中のすべてのアバターがアップロードされます。
+   Avatar Upload Setting Groupの中の各アバターをAvatar Upload Settingに指定することもできます。
 3. Start Uploadをクリックします。
