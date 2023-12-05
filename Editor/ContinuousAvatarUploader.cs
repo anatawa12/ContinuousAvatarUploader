@@ -35,6 +35,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private CancellationTokenSource _cancellationToken;
         private IVRCSdkAvatarBuilderApi _builder = null;
+        private int _totalCount;
+        private int _uploadingIndex;
 
         [MenuItem("Window/Continuous Avatar Uploader")]
         public static void OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
@@ -62,6 +64,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (uploadInProgress)
             {
                 GUILayout.Label("UPLOAD IN PROGRESS");
+                EditorGUI.ProgressBar(GUILayoutUtility.GetRect(100, 20),
+                    (_uploadingIndex + 0.5f) / _totalCount,
+                    $"Uploading {_uploadingIndex + 1} / {_totalCount}");
                 if (_currentUploadingAvatar)
                 {
                     EditorGUILayout.ObjectField("Uploading", _currentUploadingAvatar, typeof(AvatarUploadSetting), true);
@@ -191,13 +196,16 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             try
             {
                 _guiState = State.PreparingAvatar;
+                var uploadingAvatars = GetUploadingAvatars().ToArray();
+                _totalCount = uploadingAvatars.Length;
                 await Uploader.Upload(builder,
                     sleepMilliseconds: (int)(Preferences.SleepSeconds * 1000),
-                    uploadingAvatars: GetUploadingAvatars(),
-                    onStartUpload: avatar =>
+                    uploadingAvatars: uploadingAvatars,
+                    onStartUpload: (avatar, index) =>
                     {
                         _guiState = State.UploadingAvatar;
                         _currentUploadingAvatar = avatar;
+                        _uploadingIndex = index;
                     },
                     onException: (exception, avatar) =>
                     {
