@@ -7,7 +7,7 @@
 - [x] 複数のアバターを連続的にアップロードする
 - [x] アバターの説明をバージョン名に合わせて更新する。例えば `(v1)` -> `(v2)` のような形で。
 - [x] 設定可能な前置詞/後置詞をつけてgitのtag付を自動的に行う
-- [ ] ~~Automatically switch target platform and branch depends on platform (e.g. for quest, `quest-master` and for PC, `master` branch.)~~
+- [ ] ~~Automatically switch target platform and branch depends on platform (e.g. for quest, `quest-master` and for PC, `master` branch.)~~ (not planned)
 
 ## インストール方法
 
@@ -25,9 +25,9 @@
 
 どちらを作成する場合もProjectウィンドウ内で右クリックから`Create/Avatar Upload Setting`または`Create/Avatar Upload Setting Group`を選択してください。
 
-`Avatar Upload Setting`の場合はSet Avatarの欄にHierarchyからアバターをドラック&ドロップしてそのAvatar Upload Settingに紐付けてください。
+`Avatar Upload Setting`の場合はInspectorのSet Avatarの欄にHierarchyからアバターをドラック&ドロップしてそのAvatar Upload Settingに紐付けてください。
 
-`Avatar Upload Setting Group`の場合はAvatar to Addの欄にHierarchyからアバターをドラック&ドロップしてAdd Avatarを押すことでアバターをAvatar Upload Setting Groupに追加してください。
+`Avatar Upload Setting Group`の場合はInspectorのAvatar to Addの欄にHierarchyからアバターをドラック&ドロップしてAdd Avatarを押してアバターをAvatar Upload Setting Groupに追加してください。
 
 次にそれそれのアバターの設定を行います。これはどちらでも共通です。
 
@@ -50,6 +50,7 @@ tagには自由な接頭辞/接尾辞を指定できます
 ### 2 アップロードする
 
 1. `Window/Continuous Avatar Uploader`からContinuous Avatar Uploaderを開きます。
-2. Avatar Upload SettingまたはAvatar Upload Setting Groupを指定します。Groupを指定した場合、そのグループの中のすべてのアバターがアップロードされます。
-   Avatar Upload Setting Groupの中の各アバターをAvatar Upload Settingに指定することもできます。
+2. ウィンドウにAvatar Upload SettingまたはAvatar Upload Setting Groupを指定します。
+   Groupを指定した場合、そのグループの中のすべてのアバターがアップロードされます。
+   Avatar Upload Setting Groupの中のAvatar Upload Settingを個別にAvatar Upload Setting欄に指定することもできます。
 3. Start Uploadをクリックします。
