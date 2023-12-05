@@ -50,7 +50,7 @@ tagには自由な接頭辞/接尾辞を指定できます
 ### 2 アップロードする
 
 1. `Window/Continuous Avatar Uploader`からContinuous Avatar Uploaderを開きます。
-2. ウィンドウにAvatar Upload SettingまたはAvatar Upload Setting Groupを指定します。
+2. Continuous Avatar Uploaderに、アップロードしたいアバターのAvatar Upload SettingまたはAvatar Upload Setting Groupを指定します。
    Groupを指定した場合、そのグループの中のすべてのアバターがアップロードされます。
-   Avatar Upload Setting Groupの中のAvatar Upload Settingを個別にAvatar Upload Setting欄に指定することもできます。
+   また、Avatar Upload Setting Groupの中のAvatar Upload Setting (Sub Assetになっています) を個別にAvatar Upload Setting欄に指定することもできます。
 3. Start Uploadをクリックします。
