@@ -39,6 +39,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private int _uploadingIndex;
 
         [MenuItem("Window/Continuous Avatar Uploader")]
+        [MenuItem("Tools/Continuous Avatar Uploader")]
         public static void OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
 
         private void OnEnable()
