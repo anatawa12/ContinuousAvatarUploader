@@ -30,11 +30,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private static readonly SemaphoreSlim GlobalSemaphore = new SemaphoreSlim(1, 1);
 
+        public delegate void StartUpload(AvatarUploadSetting avatr, int index);
+
         public static async Task Upload(
             IVRCSdkAvatarBuilderApi builder,
             int sleepMilliseconds,
-            IEnumerable<AvatarUploadSetting> uploadingAvatars,
-            Action<AvatarUploadSetting> onStartUpload = null,
+            AvatarUploadSetting[] uploadingAvatars,
+            StartUpload onStartUpload = null,
             Action<AvatarUploadSetting> onFinishUpload = null,
             Action<Exception, AvatarUploadSetting> onException = null,
             CancellationToken cancellationToken = default
@@ -75,8 +77,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private static async Task UploadImpl(
             IVRCSdkAvatarBuilderApi builder,
             int sleepMilliseconds,
-            IEnumerable<AvatarUploadSetting> uploadingAvatars,
-            Action<AvatarUploadSetting> onStartUpload,
+            AvatarUploadSetting[] uploadingAvatars,
+            StartUpload onStartUpload,
             Action<AvatarUploadSetting> onFinishUpload,
             Action<Exception, AvatarUploadSetting> onException,
             CancellationToken cancellationToken
@@ -88,8 +90,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             using (var playmodeScope = new PreventEnteringPlayModeScope())
             using (new OpeningSceneRestoreScope())
             {
-                foreach (var avatar in uploadingAvatars)
+                for (var index = 0; index < uploadingAvatars.Length; index++)
                 {
+                    var avatar = uploadingAvatars[index];
                     Debug.Log($"Upload started for {avatar.name}");
 
                     if (!avatar.GetCurrentPlatformInfo().enabled)
@@ -98,13 +101,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         continue;
                     }
 
-                    onStartUpload?.Invoke(avatar);
+                    onStartUpload?.Invoke(avatar, index);
 
                     using (var scope = LoadAvatar(avatar))
                     {
                         try
                         {
-                            await UploadAvatar(avatar, scope.AvatarDescriptor, playmodeScope, builder, cancellationToken);
+                            await UploadAvatar(avatar, scope.AvatarDescriptor, playmodeScope, builder,
+                                cancellationToken);
                         }
                         catch (Exception e)
                         {
