@@ -8,9 +8,6 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
-- Progress bar `#39`
-- `Tools/Continuous Avatar Uploader` `#40`
-- Support for VRCSDK 3.5.x `#44`
 
 ### Changed
 
@@ -21,6 +18,12 @@ The format is based on [Keep a Changelog].
 ### Fixed
 
 ### Security
+
+## [0.2.6] - 2023-12-09
+### Added
+- Progress bar [`#39`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/39)
+- `Tools/Continuous Avatar Uploader` [`#40`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/40)
+- Support for VRCSDK 3.5.x [`#44`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/44)
 
 ## [0.2.5] - 2023-11-14
 ### Fixed
@@ -85,7 +88,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.5...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.6...HEAD
+[0.2.6]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.2...v0.2.3
