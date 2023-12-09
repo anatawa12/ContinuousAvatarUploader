@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog].
 ### Added
 - Progress bar `#39`
 - `Tools/Continuous Avatar Uploader` `#40`
+- Support for VRCSDK 3.5.x `#44`
 
 ### Changed
 
