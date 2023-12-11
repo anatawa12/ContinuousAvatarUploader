@@ -110,16 +110,16 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var openControlPanel = !VRCSdkControlPanel.window;
             var noAvatarBuilder = !openControlPanel && _builder == null && !VRCSdkControlPanel.TryGetBuilder(out _builder);
             var playModeSettingsNotGood = !CheckPlaymodeSettings();
-            if (noDescriptors) EditorGUILayout.HelpBox("No AvatarDescriptors are specified", MessageType.Error);
-            if (anyNull) EditorGUILayout.HelpBox("Some AvatarDescriptor is None", MessageType.Error);
-            if (anyGroupNull) EditorGUILayout.HelpBox("Some AvatarDescriptor Group is None", MessageType.Error);
+            if (noDescriptors) EditorGUILayout.HelpBox("No AvatarUploadSettings are specified", MessageType.Error);
+            if (anyNull) EditorGUILayout.HelpBox("Some AvatarUploadSetting is None", MessageType.Error);
+            if (anyGroupNull) EditorGUILayout.HelpBox("Some AvatarUploadSettingGroup is None", MessageType.Error);
             if (playMode) EditorGUILayout.HelpBox("To upload avatars, exit Play mode", MessageType.Error);
             if (noCredentials) EditorGUILayout.HelpBox("Please login in control panel", MessageType.Error);
             if (openControlPanel) EditorGUILayout.HelpBox("Please open Control panel", MessageType.Error);
             if (noAvatarBuilder) EditorGUILayout.HelpBox("No Valid VRCSDK Avatars Found", MessageType.Error);
             if (playModeSettingsNotGood)
                 EditorGUILayout.HelpBox(
-                    "Some avatars are going ot take thumbnail in PlayMode. " +
+                    "Some avatars are going or taking thumbnail in PlayMode. " +
                     "To take thumbnail in PlayMode, Please Disable 'Reload Domain' Option in " +
                     "Enter Play Mode Settings in Editor in Project Settings",
                     MessageType.Error);
