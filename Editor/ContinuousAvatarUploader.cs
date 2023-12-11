@@ -119,7 +119,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (noAvatarBuilder) EditorGUILayout.HelpBox("No Valid VRCSDK Avatars Found", MessageType.Error);
             if (playModeSettingsNotGood)
                 EditorGUILayout.HelpBox(
-                    "Some avatars are going or take thumbnail in PlayMode. " +
+                    "Some avatars are going or taking thumbnail in PlayMode. " +
                     "To take thumbnail in PlayMode, Please Disable 'Reload Domain' Option in " +
                     "Enter Play Mode Settings in Editor in Project Settings",
                     MessageType.Error);
