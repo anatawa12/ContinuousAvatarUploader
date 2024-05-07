@@ -8,8 +8,12 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- Change avatar order in Avatar Group `#53`
+- Show index in Avatar Group `#53`
 
 ### Changed
+- Clear `Avatar to add` on `Add Avatar` button clicked `#53`
+- Save sub-asset on adding/removing Avatar Group `#53`
 
 ### Deprecated
 
