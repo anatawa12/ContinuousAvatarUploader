@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog].
 ### Changed
 - Clear `Avatar to add` on `Add Avatar` button clicked `#53`
 - Save sub-asset on adding/removing Avatar Group `#53`
+- Unified the Setting list and Group list in the window `#58`
 
 ### Deprecated
 

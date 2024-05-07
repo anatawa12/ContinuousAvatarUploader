@@ -3,13 +3,21 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Serialization;
-using VRC.SDK3.Avatars.Components;
 using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
+    public abstract class AvatarUploadSettingOrGroup : ScriptableObject
+    {
+        internal AvatarUploadSettingOrGroup()
+        {
+        }
+
+        internal abstract AvatarUploadSetting[] Settings { get; }
+    }
+
     [CreateAssetMenu(menuName = "Continuous Avatar Uploader/Avatar Upload Setting")]
-    public class AvatarUploadSetting : ScriptableObject
+    public class AvatarUploadSetting : AvatarUploadSettingOrGroup
     {
         public string avatarName;
         public MaySceneReference avatarDescriptor;
@@ -24,6 +32,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public PlatformSpecificInfo GetCurrentPlatformInfo() =>
             EditorUserBuildSettings.selectedBuildTargetGroup == BuildTargetGroup.Standalone ? windows : quest;
+
+        internal override AvatarUploadSetting[] Settings => new[] { this };
     }
 
     [Serializable]
