@@ -186,6 +186,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public void CreateInspectorElement()
         {
+            if (_inspectorElementContainer.childCount != 0) return;
             _inspectorElementContainer.Add(new InspectorElement(_setting));
         }
 
