@@ -65,6 +65,21 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             container.Add(new InspectorElement(descriptor));
             container.Add(new IMGUIContainer(() =>
             {
+                GUILayout.BeginHorizontal();
+                EditorGUI.BeginDisabledGroup(_asset.avatars[0] == descriptor);
+                if (GUILayout.Button("▲", EditorStyles.miniButton, GUILayout.Width(30)))
+                {
+                    var index = System.Array.IndexOf(_asset.avatars, descriptor);
+                    Debug.Assert(index != -1, nameof(index) + " != -1");
+                    var temp = _asset.avatars[index - 1];
+                    _asset.avatars[index - 1] = descriptor;
+                    _asset.avatars[index] = temp;
+                    var parent = container.parent;
+                    parent.RemoveAt(index);
+                    parent.Insert(index - 1, container);
+                    EditorUtility.SetDirty(_asset);
+                }
+                EditorGUI.EndDisabledGroup();
                 if (GUILayout.Button("Remove Avatar"))
                 {
                     container.parent.Remove(container);
@@ -73,6 +88,20 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     DestroyImmediate(descriptor, true);
                     AssetDatabase.SaveAssetIfDirty(_asset);
                 }
+                EditorGUI.BeginDisabledGroup(_asset.avatars[_asset.avatars.Length - 1] == descriptor);
+                if (GUILayout.Button("▼", EditorStyles.miniButton, GUILayout.Width(30)))
+                {
+                    var index = System.Array.IndexOf(_asset.avatars, descriptor);
+                    Debug.Assert(index != -1, nameof(index) + " != -1");
+                    var temp = _asset.avatars[index + 1];
+                    _asset.avatars[index + 1] = descriptor;
+                    _asset.avatars[index] = temp;
+                    var parent = container.parent;
+                    parent.RemoveAt(index);
+                    parent.Insert(index + 1, container);
+                    EditorUtility.SetDirty(_asset);
+                }
+                GUILayout.EndHorizontal();
                 HorizontalLine();
             }));
             return container;
