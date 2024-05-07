@@ -75,5 +75,51 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 && asGameObject.GetComponent<VRCAvatarDescriptor>()
                 && EditorUtility.IsPersistent(activeObject));
         }
+        
+        const string CreateFromSelection = CreateMenuBasePath + "Group from Selection";
+
+        [MenuItem(CreateFromSelection)]
+        private static void CreateAvatarUploadSettingGroupFromSelection()
+        {
+            var path = EditorUtility.SaveFilePanelInProject(
+                "Save Avatar Upload Setting Group",
+                "New Avatar Upload Setting Group",
+                "asset",
+                "Save Avatar Upload Setting Group");
+            if (string.IsNullOrEmpty(path)) return;
+
+            var roots = Selection.objects
+                    .Select(obj => obj as GameObject)
+                    .Where(go => go)
+                    .Select(go => go.GetComponent<VRCAvatarDescriptor>())
+                    .ToArray();
+
+            var group = ScriptableObject.CreateInstance<AvatarUploadSettingGroup>();
+            group.name = System.IO.Path.GetFileNameWithoutExtension(path);
+            AssetDatabase.CreateAsset(group, path);
+            group.avatars = roots
+                .Select(descriptor =>
+                {
+                    var newObj = ScriptableObject.CreateInstance<AvatarUploadSetting>();
+                    newObj.avatarDescriptor = new MaySceneReference(descriptor);
+                    newObj.name = newObj.avatarName = descriptor.gameObject.name;
+                    return newObj;
+                })
+                .ToArray();
+            EditorUtility.SetDirty(group);
+            foreach (var avatarUploadSetting in group.avatars)
+                AssetDatabase.AddObjectToAsset(avatarUploadSetting, group);
+            AssetDatabase.SaveAssetIfDirty(group);
+            EditorGUIUtility.PingObject(group);
+        }
+
+        [MenuItem(CreateFromSelection, true)]
+        private static bool ValidateCreateAvatarUploadSettingGroupFromSelection()
+        {
+            return Selection.objects.All(activeObject =>
+                activeObject is GameObject asGameObject
+                && asGameObject.GetComponent<VRCAvatarDescriptor>()
+                && EditorUtility.IsPersistent(activeObject));
+        }
     }
 }
