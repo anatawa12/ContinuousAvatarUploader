@@ -43,16 +43,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private static bool ValidateCreateAvatarUploadSettingGroupFromPrefabVariants() => SelectionAreAvatarPrefabs();
 
         const string CreateFromSelection = CreateMenuBasePath + "Group from Selection";
+        const string CreateFromSelectionInGameObject = "GameObject/Continuous Avatar Uploader/Group from Selection";
 
         [MenuItem(CreateFromSelection)]
+        [MenuItem(CreateFromSelectionInGameObject)]
         private static void CreateAvatarUploadSettingGroupFromSelection() =>
-            CreateFromDescriptors(() => GetSelectedAvatarDescriptors().ToArray());
+            OnceFilter(() => CreateFromDescriptors(() => GetSelectedAvatarDescriptors().ToArray()));
 
         [MenuItem(CreateFromSelection, true)]
+        [MenuItem(CreateFromSelectionInGameObject, true)]
         private static bool ValidateCreateAvatarUploadSettingGroupFromSelection()
         {
             Debug.Log(string.Join(",", Selection.objects.Select(x => x.GetType())));
             return SelectionAreAvatarDescriptors();
+        }
+
+        // for GameObject/ menu, the handler will be called multiple times (selection count times)
+        //   so we need to filter it
+        // https://issuetracker.unity3d.com/issues/menuitem-is-executed-more-than-once-when-multiple-objects-are-selected
+        private static bool _called;
+        private static void OnceFilter(Action action)
+        {
+            if (_called) return;
+            action();
+            _called = true;
+            EditorApplication.delayCall += () => _called = false;
         }
 
         private static void CreateFromDescriptors(
