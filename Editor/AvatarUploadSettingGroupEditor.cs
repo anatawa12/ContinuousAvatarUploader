@@ -62,6 +62,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private VisualElement CreateDescriptorInspector(AvatarUploadSetting descriptor)
         {
             var container = new VisualElement();
+            container.Add(new IMGUIContainer(() =>
+            {
+                int index = System.Array.IndexOf(_asset.avatars, descriptor);
+                EditorGUILayout.LabelField($"Avatar #{index}");
+            }));
             container.Add(new InspectorElement(descriptor));
             container.Add(new IMGUIContainer(() =>
             {
