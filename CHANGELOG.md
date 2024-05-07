@@ -8,27 +8,36 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
-- Change avatar order in Avatar Group `#53`
-- Show index in Avatar Group `#53`
-- Create Group of Variants from Prefab `#54`
-- Create Group from Selected Avatars `#54`
-- Upload button on inspector `#55`
 
 ### Changed
-- Clear `Avatar to add` on `Add Avatar` button clicked `#53`
-- Save sub-asset on adding/removing Avatar Group `#53`
-- Unified the Setting list and Group list in the window `#58`
 
 ### Deprecated
 
 ### Removed
-- Unity 2019 support `#57`
 
 ### Fixed
-- Opening the Group with many avatars is slow `#55`
-- Error with Enter Play Mode disabled `#56`
 
 ### Security
+
+## [0.3.0] - 2024-05-07
+### Added
+- Change avatar order in Avatar Group [`#53`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/53)
+- Show index in Avatar Group [`#53`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/53)
+- Create Group of Variants from Prefab [`#54`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/54)
+- Create Group from Selected Avatars [`#54`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/54)
+- Upload button on inspector [`#55`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/55)
+
+### Changed
+- Clear `Avatar to add` on `Add Avatar` button clicked [`#53`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/53)
+- Save sub-asset on adding/removing Avatar Group [`#53`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/53)
+- Unified the Setting list and Group list in the window [`#58`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/58)
+
+### Removed
+- Unity 2019 support [`#57`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/57)
+
+### Fixed
+- Opening the Group with many avatars is slow [`#55`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/55)
+- Error with Enter Play Mode disabled [`#56`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/56)
 
 ## [0.2.6] - 2023-12-09
 ### Added
@@ -99,7 +108,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.6...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.6...v0.3.0
 [0.2.6]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.3...v0.2.4
