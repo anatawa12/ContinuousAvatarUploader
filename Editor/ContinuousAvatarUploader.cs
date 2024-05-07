@@ -237,7 +237,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private IEnumerable<AvatarUploadSetting> GetUploadingAvatars() =>
             avatarSettings.Concat(groups.SelectMany(x =>
-                x != null ? x.avatars : Array.Empty<AvatarUploadSetting>()));
+                    x != null ? x.avatars : Array.Empty<AvatarUploadSetting>()))
+                .Where(x => x);
 
         private async void StartUpload(IVRCSdkAvatarBuilderApi builder)
         {

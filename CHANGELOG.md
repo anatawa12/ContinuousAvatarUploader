@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog].
 
 ### Fixed
 - Opening the Group with many avatars is slow `#55`
+- Error with Enter Play Mode disabled `#56`
 
 ### Security
 
