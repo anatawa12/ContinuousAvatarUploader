@@ -46,6 +46,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     EditorUtility.SetDirty(_asset);
                     AssetDatabase.AddObjectToAsset(newObj, _asset);
                     inspectors.Add(CreateDescriptorInspector(newObj));
+                    avatarDescriptor = null;
                 }
 
                 EditorGUI.EndDisabledGroup();
