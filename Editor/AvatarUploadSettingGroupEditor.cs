@@ -45,6 +45,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     ArrayUtility.Add(ref _asset.avatars, newObj);
                     EditorUtility.SetDirty(_asset);
                     AssetDatabase.AddObjectToAsset(newObj, _asset);
+                    AssetDatabase.SaveAssetIfDirty(newObj);
                     inspectors.Add(CreateDescriptorInspector(newObj));
                     avatarDescriptor = null;
                 }
@@ -70,6 +71,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     ArrayUtility.Remove(ref _asset.avatars, descriptor);
                     EditorUtility.SetDirty(_asset);
                     DestroyImmediate(descriptor, true);
+                    AssetDatabase.SaveAssetIfDirty(_asset);
                 }
                 HorizontalLine();
             }));
