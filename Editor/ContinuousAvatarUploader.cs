@@ -12,8 +12,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     public class ContinuousAvatarUploader : EditorWindow
     {
-        [SerializeField] [ItemCanBeNull] [NotNull] internal AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
-        [SerializeField] [ItemCanBeNull] [NotNull] internal AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
+        [SerializeField] [ItemCanBeNull] [NotNull] internal AvatarUploadSettingOrGroup[] settingsOrGroups = Array.Empty<AvatarUploadSettingOrGroup>();
 
         [CanBeNull]
         internal static ContinuousAvatarUploader Instance
@@ -42,8 +41,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         private SerializedObject _serialized;
-        private SerializedProperty _avatarDescriptor;
-        private SerializedProperty _groups;
+        private SerializedProperty _settingsOrGroups;
 
         private CancellationTokenSource _cancellationToken;
         private IVRCSdkAvatarBuilderApi _builder = null;
@@ -57,8 +55,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private void OnEnable()
         {
             _serialized = new SerializedObject(this);
-            _avatarDescriptor = _serialized.FindProperty(nameof(avatarSettings));
-            _groups = _serialized.FindProperty(nameof(groups));
+            _settingsOrGroups = _serialized.FindProperty(nameof(settingsOrGroups));
+            _settingsOrGroups.isExpanded = true;
             VRCSdkControlPanel.OnSdkPanelEnable += OnSdkPanelEnableDisable;
             VRCSdkControlPanel.OnSdkPanelDisable += OnSdkPanelEnableDisable;
         }
@@ -95,12 +93,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             EditorGUI.BeginDisabledGroup(uploadInProgress);
             _serialized.Update();
-            EditorGUILayout.PropertyField(_avatarDescriptor);
-            if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect()), "Clear Avatars"))
-                _avatarDescriptor.arraySize = 0;
-            EditorGUILayout.PropertyField(_groups);
+            EditorGUILayout.PropertyField(_settingsOrGroups);
             if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect()), "Clear Groups"))
-                _groups.arraySize = 0;
+                _settingsOrGroups.arraySize = 0;
             _serialized.ApplyModifiedProperties();
             Preferences.SleepSeconds = EditorGUILayout.FloatField(
                 new GUIContent("Sleep Seconds", "The time sleeps between upload"),
@@ -117,8 +112,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var checkResult = CheckUpload();
             if ((checkResult & UploadCheckResult.Uploading) != 0)
                 EditorGUILayout.HelpBox("Uploading", MessageType.Info);
-            if ((checkResult & UploadCheckResult.NoDescriptors) != 0)
-                EditorGUILayout.HelpBox("No AvatarUploadSettings are specified", MessageType.Error);
             if ((checkResult & UploadCheckResult.NoDescriptors) != 0)
                 EditorGUILayout.HelpBox("No AvatarUploadSettings are specified", MessageType.Error);
             if ((checkResult & UploadCheckResult.AnyNull) != 0)
@@ -179,9 +172,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             var result = UploadCheckResult.Ok;
             if (_guiState != State.Configuring) result |= UploadCheckResult.Uploading;
-            if (avatarSettings.Length == 0 && groups.Length == 0) result |= UploadCheckResult.NoDescriptors;
-            if (avatarSettings.Any(x => !x)) result |= UploadCheckResult.AnyNull;
-            if (groups.Any(x => !x)) result |= UploadCheckResult.AnyNull;
+            if (settingsOrGroups.Length == 0) result |= UploadCheckResult.NoDescriptors;
+            if (settingsOrGroups.Any(x => !x)) result |= UploadCheckResult.AnyNull;
             if (EditorApplication.isPlayingOrWillChangePlaymode) result |= UploadCheckResult.PlayMode;
             if (!VerifyCredentials(Repaint)) result |= UploadCheckResult.NoCredentials;
             if (!VRCSdkControlPanel.window) result |= UploadCheckResult.ControlPanelClosed;
@@ -236,8 +228,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         private IEnumerable<AvatarUploadSetting> GetUploadingAvatars() =>
-            avatarSettings.Concat(groups.SelectMany(x =>
-                    x != null ? x.avatars : Array.Empty<AvatarUploadSetting>()))
+            settingsOrGroups
+                .Where(x => x)
+                .SelectMany(x => x.Settings)
                 .Where(x => x);
 
         private async void StartUpload(IVRCSdkAvatarBuilderApi builder)

@@ -42,8 +42,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (GUILayout.Button("Upload All"))
                 {
                     var uploader = EditorWindow.GetWindow<ContinuousAvatarUploader>();
-                    uploader.avatarSettings = Array.Empty<AvatarUploadSetting>();
-                    uploader.groups = new[] { _asset };
+                    uploader.settingsOrGroups = new AvatarUploadSettingOrGroup[] { _asset };
                     if (!uploader.StartUpload())
                     {
                         EditorUtility.DisplayDialog("Failed to start upload",
