@@ -12,8 +12,20 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     public class ContinuousAvatarUploader : EditorWindow
     {
-        [SerializeField] [ItemCanBeNull] [NotNull] AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
-        [SerializeField] [ItemCanBeNull] [NotNull] AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
+        [SerializeField] [ItemCanBeNull] [NotNull] internal AvatarUploadSetting[] avatarSettings = Array.Empty<AvatarUploadSetting>();
+        [SerializeField] [ItemCanBeNull] [NotNull] internal AvatarUploadSettingGroup[] groups = Array.Empty<AvatarUploadSettingGroup>();
+
+        [CanBeNull]
+        internal static ContinuousAvatarUploader Instance
+        {
+            get
+            {
+                var objects = Resources.FindObjectsOfTypeAll(typeof(ContinuousAvatarUploader));
+                return objects.Length == 0 ? null : (ContinuousAvatarUploader)objects[0];
+            }
+        }
+
+        internal bool Uploading => _guiState != State.Configuring;
 
         // for uploading avatars
 
@@ -102,28 +114,30 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     "If this is enabled, CAU will tell you upload finished."),
                 Preferences.ShowDialogWhenUploadFinished);
 
-            var noDescriptors = avatarSettings.Length == 0 && groups.Length == 0;
-            var anyNull = avatarSettings.Any(x => !x);
-            var anyGroupNull = groups.Any(x => !x);
-            var playMode = !uploadInProgress && EditorApplication.isPlayingOrWillChangePlaymode;
-            var noCredentials = !VerifyCredentials(Repaint);
-            var openControlPanel = !VRCSdkControlPanel.window;
-            var noAvatarBuilder = !openControlPanel && _builder == null && !VRCSdkControlPanel.TryGetBuilder(out _builder);
-            var playModeSettingsNotGood = !CheckPlaymodeSettings();
-            if (noDescriptors) EditorGUILayout.HelpBox("No AvatarUploadSettings are specified", MessageType.Error);
-            if (anyNull) EditorGUILayout.HelpBox("Some AvatarUploadSetting is None", MessageType.Error);
-            if (anyGroupNull) EditorGUILayout.HelpBox("Some AvatarUploadSettingGroup is None", MessageType.Error);
-            if (playMode) EditorGUILayout.HelpBox("To upload avatars, exit Play mode", MessageType.Error);
-            if (noCredentials) EditorGUILayout.HelpBox("Please login in control panel", MessageType.Error);
-            if (openControlPanel) EditorGUILayout.HelpBox("Please open Control panel", MessageType.Error);
-            if (noAvatarBuilder) EditorGUILayout.HelpBox("No Valid VRCSDK Avatars Found", MessageType.Error);
-            if (playModeSettingsNotGood)
+            var checkResult = CheckUpload();
+            if ((checkResult & UploadCheckResult.Uploading) != 0)
+                EditorGUILayout.HelpBox("Uploading", MessageType.Info);
+            if ((checkResult & UploadCheckResult.NoDescriptors) != 0)
+                EditorGUILayout.HelpBox("No AvatarUploadSettings are specified", MessageType.Error);
+            if ((checkResult & UploadCheckResult.NoDescriptors) != 0)
+                EditorGUILayout.HelpBox("No AvatarUploadSettings are specified", MessageType.Error);
+            if ((checkResult & UploadCheckResult.AnyNull) != 0)
+                EditorGUILayout.HelpBox("Some AvatarUploadSetting or Group are None", MessageType.Error);
+            if ((checkResult & UploadCheckResult.PlayMode) != 0)
+                EditorGUILayout.HelpBox("To upload avatars, exit Play mode", MessageType.Error);
+            if ((checkResult & UploadCheckResult.NoCredentials) != 0)
+                EditorGUILayout.HelpBox("Please login in control panel", MessageType.Error);
+            if ((checkResult & UploadCheckResult.ControlPanelClosed) != 0)
+                EditorGUILayout.HelpBox("Please open Control panel", MessageType.Error);
+            if ((checkResult & UploadCheckResult.NoAvatarBuilder) != 0)
+                EditorGUILayout.HelpBox("No Valid VRCSDK Avatars Found", MessageType.Error);
+            if ((checkResult & UploadCheckResult.PlayModeSettingsNotGood) != 0)
                 EditorGUILayout.HelpBox(
                     "Some avatars are going or taking thumbnail in PlayMode. " +
                     "To take thumbnail in PlayMode, Please Disable 'Reload Domain' Option in " +
                     "Enter Play Mode Settings in Editor in Project Settings",
                     MessageType.Error);
-            using (new EditorGUI.DisabledScope(noDescriptors || anyNull || anyGroupNull || playMode || noCredentials || openControlPanel || noAvatarBuilder || playModeSettingsNotGood))
+            using (new EditorGUI.DisabledScope(checkResult != UploadCheckResult.Ok))
             {
                 if (GUILayout.Button("Start Upload"))
                     StartUpload(_builder);
@@ -145,6 +159,42 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
             }
             EditorGUILayout.EndScrollView();
+        }
+
+        [Flags]
+        internal enum UploadCheckResult
+        {
+            Ok = 0,
+            Uploading = 1 << 0,
+            NoDescriptors = 1 << 1,
+            AnyNull = 1 << 2,
+            PlayMode = 1 << 3,
+            NoCredentials = 1 << 4,
+            ControlPanelClosed = 1 << 5,
+            NoAvatarBuilder = 1 << 6,
+            PlayModeSettingsNotGood = 1 << 7,
+        }
+
+        private UploadCheckResult CheckUpload()
+        {
+            var result = UploadCheckResult.Ok;
+            if (_guiState != State.Configuring) result |= UploadCheckResult.Uploading;
+            if (avatarSettings.Length == 0 && groups.Length == 0) result |= UploadCheckResult.NoDescriptors;
+            if (avatarSettings.Any(x => !x)) result |= UploadCheckResult.AnyNull;
+            if (groups.Any(x => !x)) result |= UploadCheckResult.AnyNull;
+            if (EditorApplication.isPlayingOrWillChangePlaymode) result |= UploadCheckResult.PlayMode;
+            if (!VerifyCredentials(Repaint)) result |= UploadCheckResult.NoCredentials;
+            if (!VRCSdkControlPanel.window) result |= UploadCheckResult.ControlPanelClosed;
+            if (!VRCSdkControlPanel.TryGetBuilder(out _builder)) result |= UploadCheckResult.NoAvatarBuilder;
+            if (!CheckPlaymodeSettings()) result |= UploadCheckResult.PlayModeSettingsNotGood;
+            return result;
+        }
+
+        internal bool StartUpload()
+        {
+            if (CheckUpload() != UploadCheckResult.Ok) return false;
+            StartUpload(_builder);
+            return true;
         }
 
         private bool CheckPlaymodeSettings()
