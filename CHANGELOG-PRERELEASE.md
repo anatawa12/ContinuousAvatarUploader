@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog].
 - Show index in Avatar Group `#53`
 - Create Group of Variants from Prefab `#54`
 - Create Group from Selected Avatars `#54`
+- Upload button on inspector `#55`
 
 ### Changed
 - Clear `Avatar to add` on `Add Avatar` button clicked `#53`
@@ -22,6 +23,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Opening the Group with many avatars is slow `#55`
 
 ### Security
 
