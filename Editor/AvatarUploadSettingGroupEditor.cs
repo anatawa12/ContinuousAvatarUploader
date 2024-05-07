@@ -35,6 +35,25 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 name = "Inspectors"
             };
 
+            var header = new IMGUIContainer(() =>
+            {
+                EditorGUILayout.LabelField("Avatar Upload Settings", EditorStyles.boldLabel);
+                
+                if (GUILayout.Button("Upload All"))
+                {
+                    var uploader = EditorWindow.GetWindow<ContinuousAvatarUploader>();
+                    uploader.avatarSettings = Array.Empty<AvatarUploadSetting>();
+                    uploader.groups = new[] { _asset };
+                    if (!uploader.StartUpload())
+                    {
+                        EditorUtility.DisplayDialog("Failed to start upload",
+                            "Failed to start upload.\nPlease refer Uploader window for reason", "OK");
+                    }
+                }
+
+                EditorGUILayout.Space();
+            });
+
             RecreateInspectors(throttled: true);
             CreateInspectorElementsThrottled();
 
@@ -64,6 +83,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 EditorGUI.EndDisabledGroup();
             });
 
+            root.Add(header);
             root.Add(_inspector);
             root.Add(trailer);
 
