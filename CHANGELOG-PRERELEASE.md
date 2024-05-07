@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog].
 ### Deprecated
 
 ### Removed
+- Unity 2019 support `#57`
 
 ### Fixed
 - Opening the Group with many avatars is slow `#55`
