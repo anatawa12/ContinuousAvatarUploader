@@ -16,7 +16,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         private AvatarUploadSettingGroup _asset;
         private Dictionary<int, CreateDescriptorContainer> _inspectorsDoctionary = new Dictionary<int, CreateDescriptorContainer>();
+        private List<CreateDescriptorContainer> _inspectors = new List<CreateDescriptorContainer>();
         private VisualElement _inspector;
+        private const int CreatePerFrame = 1;
+        private const int CreateInitial = 20;
 
         public override VisualElement CreateInspectorGUI()
         {
@@ -32,7 +35,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 name = "Inspectors"
             };
 
-            RecreateInspectors();
+            RecreateInspectors(throttled: true);
+            CreateInspectorElementsThrottled();
 
             VRCAvatarDescriptor avatarDescriptor = null;
             var trailer = new IMGUIContainer(() =>
@@ -68,9 +72,38 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             return root;
         }
 
-        void RecreateInspectors()
+        private void CreateInspectorElementsThrottled()
+        {
+            var index = 0;
+
+            for (var i = 0; i < CreateInitial; i++)
+            {
+                if (index >= _inspectors.Count) return;
+                _inspectors[index].CreateInspectorElement();
+                index++;
+            }
+
+            void CreateFrame()
+            {
+                for (var i = 0; i < CreatePerFrame; i++)
+                {
+                    if (index >= _inspectors.Count) return;
+                    _inspectors[index].CreateInspectorElement();
+                    index++;
+                }
+
+                EditorApplication.delayCall += CreateFrame;
+            }
+
+            EditorApplication.delayCall += CreateFrame;
+        }
+
+        void RecreateInspectors() => RecreateInspectors(false);
+
+        void RecreateInspectors(bool throttled)
         {
             _inspector.Clear();
+            _inspectors.Clear();
             var instanceIds = new HashSet<int>();
             foreach (var assetAvatar in _asset.avatars)
             {
@@ -81,9 +114,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     _inspectorsDoctionary.Add(instanceId,
                         container = new CreateDescriptorContainer(_asset, assetAvatar));
                     container.OnReorder += RecreateInspectors;
+                    if (!throttled) container.CreateInspectorElement();
                 }
 
                 _inspector.Add(container);
+                _inspectors.Add(container);
             }
 
             foreach (var i in _inspectorsDoctionary.Keys.ToArray())
@@ -95,15 +130,18 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     class CreateDescriptorContainer : VisualElement
     {
         public event Action OnReorder;
+        private readonly AvatarUploadSetting _setting;
+        private readonly VisualElement _inspectorElementContainer;
 
         public CreateDescriptorContainer(AvatarUploadSettingGroup group, AvatarUploadSetting setting)
         {
+            _setting = setting;
             Add(new IMGUIContainer(() =>
             {
                 int index = System.Array.IndexOf(group.avatars, setting);
                 EditorGUILayout.LabelField($"Avatar #{index}");
             }));
-            Add(new InspectorElement(setting));
+            Add(_inspectorElementContainer = new VisualElement());
             Add(new IMGUIContainer(() =>
             {
                 GUILayout.BeginHorizontal();
@@ -144,6 +182,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 GUILayout.EndHorizontal();
                 HorizontalLine();
             }));
+        }
+
+        public void CreateInspectorElement()
+        {
+            _inspectorElementContainer.Add(new InspectorElement(_setting));
         }
 
         private static void HorizontalLine(float regionHeight = 18f, float lineHeight = 1f)
