@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
-    [CreateAssetMenu]
+    [CreateAssetMenu(menuName = "Continuous Avatar Uploader/Avatar Upload Setting")]
     public class AvatarUploadSetting : ScriptableObject
     {
         public string avatarName;
