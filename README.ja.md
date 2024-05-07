@@ -23,11 +23,16 @@
 アップロードするアバターの設定ファイルを作ります。
 `Avatar Upload Setting Group`で複数のアバターの設定を一つのファイルに纏めるか、`Avatar Upload Setting`でアバターごとにファイルを別にすることができます。\
 
-設定ファイルを作成するにはProjectウィンドウ内で右クリックし、`Create/Avatar Upload Setting`、または`Create/Avatar Upload Setting Group`を選択してください。
+設定ファイルを作成するにはProjectウィンドウ内で右クリックし、`Create/Avatar Upload Setting`、または`Create/Avatar Upload Setting Group`を選択し、Inspectorで設定を行います。
 
 `Avatar Upload Setting`ファイルは、そのInspectorのSet Avatarの欄にアバターをHierarchyからドラッグ&ドロップすることでアバターと紐付けることが出来ます。
 
 `Avatar Upload Setting Group`ファイルは、そのInspectorのAvatar to Addの欄にアバターをHierarchyからドラッグ&ドロップして、Add Avatarを押すことでアバターと紐付けることが出来ます。
+
+また、0.3.0からは以下の作成方法が追加されました。
+- ヒエラルキー上でアバターを右クリックし、`Continuous Avatar Uploader/Group from Selection`を選択することで、選択したアバターを含む`Avatar Upload Setting Group`を作成することができます。
+- Project欄でアバターのPrefabを選択し、右クリックして`Create/Continuous Avatar Uploader/Group from Selection`を選択することで、選択したアバターを含む`Avatar Upload Setting Group`を作成することができます。
+- Project欄でアバターのPrefabを選択し、右クリックして`Create/Continuous Avatar Uploader/Group of Variants from Prefab`を選択することで、選択したプレハブの子孫のPrefab Variantを含む`Avatar Upload Setting Group`を作成することができます。
 
 次にそれそれのアバターの設定を行います。これはどちらのファイルでも共通です。
 
