@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Change avatar order in Avatar Group `#53`
 - Show index in Avatar Group `#53`
+- Create Group of Variants from Prefab `#54`
+- Create Group from Selected Avatars `#54`
 
 ### Changed
 - Clear `Avatar to add` on `Add Avatar` button clicked `#53`
