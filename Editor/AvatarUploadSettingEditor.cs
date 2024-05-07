@@ -81,8 +81,24 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (GUILayout.Button("Change Avatar"))
                     _settingAvatar = true;
             }
+
+            using (new EditorGUI.DisabledGroupScope(!avatar.GetCurrentPlatformInfo().enabled))
+                if (GUILayout.Button("Upload This Avatar"))
+                    UploadThis(avatar);
             PlatformSpecificInfo("PC Windows", avatar.windows);
             PlatformSpecificInfo("Quest", avatar.quest);
+        }
+
+        private static void UploadThis(AvatarUploadSetting avatar)
+        {
+            var uploader = EditorWindow.GetWindow<ContinuousAvatarUploader>();
+            uploader.avatarSettings = new[] { avatar };
+            uploader.groups = Array.Empty<AvatarUploadSettingGroup>();
+            if (!uploader.StartUpload())
+            {
+                EditorUtility.DisplayDialog("Failed to start upload",
+                    "Failed to start upload.\nPlease refer Uploader window for reason", "OK");
+            }
         }
 
         private void PlatformSpecificInfo(string name, PlatformSpecificInfo info)

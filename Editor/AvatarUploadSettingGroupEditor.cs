@@ -1,9 +1,13 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
 using Debug = System.Diagnostics.Debug;
+using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
@@ -11,22 +15,47 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class AvatarUploadSettingGroupEditor : UnityEditor.Editor
     {
         private AvatarUploadSettingGroup _asset;
+        private Dictionary<int, CreateDescriptorContainer> _inspectorsDoctionary = new Dictionary<int, CreateDescriptorContainer>();
+        private List<CreateDescriptorContainer> _inspectors = new List<CreateDescriptorContainer>();
+        private VisualElement _inspector;
+        private const int CreatePerFrame = 1;
+        private const int CreateInitial = 20;
 
         public override VisualElement CreateInspectorGUI()
         {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             _asset = (AvatarUploadSettingGroup)target;
 
             var root = new VisualElement()
             {
                 name = "RootElement"
             };
-            var inspectors = new VisualElement()
+            _inspector = new VisualElement()
             {
                 name = "Inspectors"
             };
 
-            foreach (var assetAvatar in _asset.avatars)
-                inspectors.Add(CreateDescriptorInspector(assetAvatar));
+            var header = new IMGUIContainer(() =>
+            {
+                EditorGUILayout.LabelField("Avatar Upload Settings", EditorStyles.boldLabel);
+                
+                if (GUILayout.Button("Upload All"))
+                {
+                    var uploader = EditorWindow.GetWindow<ContinuousAvatarUploader>();
+                    uploader.avatarSettings = Array.Empty<AvatarUploadSetting>();
+                    uploader.groups = new[] { _asset };
+                    if (!uploader.StartUpload())
+                    {
+                        EditorUtility.DisplayDialog("Failed to start upload",
+                            "Failed to start upload.\nPlease refer Uploader window for reason", "OK");
+                    }
+                }
+
+                EditorGUILayout.Space();
+            });
+
+            RecreateInspectors(throttled: true);
+            CreateInspectorElementsThrottled();
 
             VRCAvatarDescriptor avatarDescriptor = null;
             var trailer = new IMGUIContainer(() =>
@@ -46,70 +75,139 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     EditorUtility.SetDirty(_asset);
                     AssetDatabase.AddObjectToAsset(newObj, _asset);
                     AssetDatabase.SaveAssetIfDirty(newObj);
-                    inspectors.Add(CreateDescriptorInspector(newObj));
                     avatarDescriptor = null;
+
+                    RecreateInspectors();
                 }
 
                 EditorGUI.EndDisabledGroup();
             });
 
-            root.Add(inspectors);
+            root.Add(header);
+            root.Add(_inspector);
             root.Add(trailer);
+
+            UnityEngine.Debug.Log($"CreateInspectorGUI took {stopwatch.ElapsedMilliseconds}ms");
 
             return root;
         }
 
-        private VisualElement CreateDescriptorInspector(AvatarUploadSetting descriptor)
+        private void CreateInspectorElementsThrottled()
         {
-            var container = new VisualElement();
-            container.Add(new IMGUIContainer(() =>
+            var index = 0;
+
+            for (var i = 0; i < CreateInitial; i++)
             {
-                int index = System.Array.IndexOf(_asset.avatars, descriptor);
+                if (index >= _inspectors.Count) return;
+                _inspectors[index].CreateInspectorElement();
+                index++;
+            }
+
+            void CreateFrame()
+            {
+                for (var i = 0; i < CreatePerFrame; i++)
+                {
+                    if (index >= _inspectors.Count) return;
+                    _inspectors[index].CreateInspectorElement();
+                    index++;
+                }
+
+                EditorApplication.delayCall += CreateFrame;
+            }
+
+            EditorApplication.delayCall += CreateFrame;
+        }
+
+        void RecreateInspectors() => RecreateInspectors(false);
+
+        void RecreateInspectors(bool throttled)
+        {
+            _inspector.Clear();
+            _inspectors.Clear();
+            var instanceIds = new HashSet<int>();
+            foreach (var assetAvatar in _asset.avatars)
+            {
+                var instanceId = assetAvatar.GetInstanceID();
+                instanceIds.Add(instanceId);
+                if (!_inspectorsDoctionary.TryGetValue(instanceId, out var container))
+                {
+                    _inspectorsDoctionary.Add(instanceId,
+                        container = new CreateDescriptorContainer(_asset, assetAvatar));
+                    container.OnReorder += RecreateInspectors;
+                    if (!throttled) container.CreateInspectorElement();
+                }
+
+                _inspector.Add(container);
+                _inspectors.Add(container);
+            }
+
+            foreach (var i in _inspectorsDoctionary.Keys.ToArray())
+                if (!instanceIds.Contains(i))
+                    _inspectorsDoctionary.Remove(i);
+        }
+    }
+
+    class CreateDescriptorContainer : VisualElement
+    {
+        public event Action OnReorder;
+        private readonly AvatarUploadSetting _setting;
+        private readonly VisualElement _inspectorElementContainer;
+
+        public CreateDescriptorContainer(AvatarUploadSettingGroup group, AvatarUploadSetting setting)
+        {
+            _setting = setting;
+            Add(new IMGUIContainer(() =>
+            {
+                int index = System.Array.IndexOf(group.avatars, setting);
                 EditorGUILayout.LabelField($"Avatar #{index}");
             }));
-            container.Add(new InspectorElement(descriptor));
-            container.Add(new IMGUIContainer(() =>
+            Add(_inspectorElementContainer = new VisualElement());
+            Add(new IMGUIContainer(() =>
             {
                 GUILayout.BeginHorizontal();
-                EditorGUI.BeginDisabledGroup(_asset.avatars[0] == descriptor);
+                EditorGUI.BeginDisabledGroup(group.avatars[0] == setting);
                 if (GUILayout.Button("▲", EditorStyles.miniButton, GUILayout.Width(30)))
                 {
-                    var index = System.Array.IndexOf(_asset.avatars, descriptor);
+                    var index = System.Array.IndexOf(group.avatars, setting);
                     Debug.Assert(index != -1, nameof(index) + " != -1");
-                    var temp = _asset.avatars[index - 1];
-                    _asset.avatars[index - 1] = descriptor;
-                    _asset.avatars[index] = temp;
-                    var parent = container.parent;
-                    parent.RemoveAt(index);
-                    parent.Insert(index - 1, container);
-                    EditorUtility.SetDirty(_asset);
+                    var temp = group.avatars[index - 1];
+                    group.avatars[index - 1] = setting;
+                    group.avatars[index] = temp;
+                    EditorUtility.SetDirty(group);
+
+                    OnReorder?.Invoke();
                 }
                 EditorGUI.EndDisabledGroup();
                 if (GUILayout.Button("Remove Avatar"))
                 {
-                    container.parent.Remove(container);
-                    ArrayUtility.Remove(ref _asset.avatars, descriptor);
-                    EditorUtility.SetDirty(_asset);
-                    DestroyImmediate(descriptor, true);
-                    AssetDatabase.SaveAssetIfDirty(_asset);
+                    ArrayUtility.Remove(ref group.avatars, setting);
+                    EditorUtility.SetDirty(group);
+                    Object.DestroyImmediate(setting, true);
+                    AssetDatabase.SaveAssetIfDirty(group);
+
+                    OnReorder?.Invoke();
                 }
-                EditorGUI.BeginDisabledGroup(_asset.avatars[_asset.avatars.Length - 1] == descriptor);
+                EditorGUI.BeginDisabledGroup(group.avatars[group.avatars.Length - 1] == setting);
                 if (GUILayout.Button("▼", EditorStyles.miniButton, GUILayout.Width(30)))
                 {
-                    var index = System.Array.IndexOf(_asset.avatars, descriptor);
+                    var index = System.Array.IndexOf(group.avatars, setting);
                     Debug.Assert(index != -1, nameof(index) + " != -1");
-                    var temp = _asset.avatars[index + 1];
-                    _asset.avatars[index + 1] = descriptor;
-                    _asset.avatars[index] = temp;
-                    var parent = container.parent;
-                    parent.RemoveAt(index);
-                    parent.Insert(index + 1, container);
-                    EditorUtility.SetDirty(_asset);
+                    var temp = group.avatars[index + 1];
+                    group.avatars[index + 1] = setting;
+                    group.avatars[index] = temp;
+                    EditorUtility.SetDirty(group);
+
+                    OnReorder?.Invoke();
                 }
                 GUILayout.EndHorizontal();
                 HorizontalLine();
             }));
-            return container;
+        }
+
+        public void CreateInspectorElement()
+        {
+            if (_inspectorElementContainer.childCount != 0) return;
+            _inspectorElementContainer.Add(new InspectorElement(_setting));
         }
 
         private static void HorizontalLine(float regionHeight = 18f, float lineHeight = 1f)
