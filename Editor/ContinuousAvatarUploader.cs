@@ -299,7 +299,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             if (!ConfigManager.RemoteConfig.IsInitialized())
             {
+#if CAU_VRCSDK_BASE_3_6_0
+                API.SetOnlineMode(true);
+#else
                 API.SetOnlineMode(true, "vrchat");
+#endif
                 ConfigManager.RemoteConfig.Init();
             }
             if (!APIUser.IsLoggedIn && ApiCredentials.Load())

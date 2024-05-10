@@ -16,6 +16,9 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- VRCSDK 3.6.0 compatibility `#63`
+  - It was working with VRCSDK 3.6.0-beta.1 but VRChat breaks API in VRCSDK 3.6.0.
+  - We added version defines to determine if VRCSDK 3.6.0 or later, or not.
 
 ### Security
 

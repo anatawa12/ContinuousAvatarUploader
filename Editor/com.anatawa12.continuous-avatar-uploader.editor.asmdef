@@ -1,5 +1,6 @@
 {
     "name": "com.anatawa12.continuous-avatar-uploader.editor",
+    "rootNamespace": "",
     "references": [
         "VRC.SDKBase",
         "VRC.SDKBase.Editor",
@@ -20,6 +21,12 @@
     ],
     "autoReferenced": false,
     "defineConstraints": [],
-    "versionDefines": [],
+    "versionDefines": [
+        {
+            "name": "com.vrchat.base",
+            "expression": "3.6.0",
+            "define": "CAU_VRCSDK_BASE_3_6_0"
+        }
+    ],
     "noEngineReferences": false
 }
