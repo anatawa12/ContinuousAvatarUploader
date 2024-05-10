@@ -16,11 +16,14 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- VRCSDK 3.6.0 compatibility `#63`
-  - It was working with VRCSDK 3.6.0-beta.1 but VRChat breaks API in VRCSDK 3.6.0.
-  - We added version defines to determine if VRCSDK 3.6.0 or later, or not.
 
 ### Security
+
+## [0.3.1] - 2024-05-10
+### Fixed
+- VRCSDK 3.6.0 compatibility [`#63`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/63)
+  - It was working with VRCSDK 3.6.0-beta.1 but VRChat breaks API in VRCSDK 3.6.0.
+  - We added version defines to determine if VRCSDK 3.6.0 or later, or not.
 
 ## [0.3.0] - 2024-05-07
 ### Added
@@ -111,7 +114,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.6...v0.3.0
 [0.2.6]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.5...v0.2.6
 [0.2.5]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.4...v0.2.5
