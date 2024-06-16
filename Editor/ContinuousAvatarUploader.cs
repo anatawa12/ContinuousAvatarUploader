@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -94,6 +94,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUI.BeginDisabledGroup(uploadInProgress);
             _serialized.Update();
             EditorGUILayout.PropertyField(_settingsOrGroups);
+            if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect()), "Create New Upload Groups"))
+            {
+                AddAvatarUploadSettingGroup();
+            }
+
             if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect()), "Clear Groups"))
                 _settingsOrGroups.arraySize = 0;
             _serialized.ApplyModifiedProperties();
@@ -152,6 +157,24 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
             }
             EditorGUILayout.EndScrollView();
+        }
+
+        private void AddAvatarUploadSettingGroup()
+        {
+            AvatarUploadSettingGroup createdGroup;
+            createdGroup = AvatarUploadSettingGroupCreateTool.CreateNewUploadGroup();
+            if (!createdGroup) return;
+
+            // _settingsOrGroupsにcreatedGroupを追加
+            _serialized.Update();
+            _settingsOrGroups.arraySize++;
+            _settingsOrGroups.GetArrayElementAtIndex(_settingsOrGroups.arraySize - 1).objectReferenceValue = createdGroup;
+            _serialized.ApplyModifiedProperties();
+
+            if (createdGroup)
+            {
+                UploadSettingGroupCreator.UploadSettingGroupCreatorShowWindow(createdGroup);
+            }
         }
 
         [Flags]
