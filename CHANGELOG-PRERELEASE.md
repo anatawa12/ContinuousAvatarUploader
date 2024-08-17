@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- VRCSDK 3.7.0 compatibility `#69`
+  - Actually, it was compatible so this is just a dependency declaration update.
 
 ### Changed
 
