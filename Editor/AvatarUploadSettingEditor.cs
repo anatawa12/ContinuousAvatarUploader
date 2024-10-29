@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
 using UnityEditor;
@@ -18,7 +20,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         private VRCAvatarDescriptor _cachedAvatar;
         private bool _settingAvatar;
-        [CanBeNull] private PreviewCameraManager _previewCameraManager;
+        [CanBeNull] private static PreviewCameraManager _previewCameraManager;
 
         public override void OnInspectorGUI()
         {
@@ -33,10 +35,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void OnDisable()
         {
-            if (_previewCameraManager != null)
+            if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar) 
             {
-                _previewCameraManager.Finish();
-                _previewCameraManager = null;
+                _previewCameraManager.RemoveEditor(this);
             }
         }
 
@@ -87,6 +88,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     UploadThis(avatar);
             PlatformSpecificInfo("PC Windows", avatar.windows);
             PlatformSpecificInfo("Quest", avatar.quest);
+            PlatformSpecificInfo("iOS", avatar.ios);
+
+            EditorGUI.BeginDisabledGroup(
+                !_cachedAvatar
+                // previewing other avatar
+                || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
+            );
+            if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
+            {
+                _previewCameraManager.AddEditor(this);
+                _previewCameraManager.DrawPreview();
+                if (IndentedButton("Finish Setting Camera Position"))
+                {
+                    _previewCameraManager?.Finish();
+                    _previewCameraManager = null;
+                }
+            }
+            else
+            {
+                if (IndentedButton("Configure Camera Position"))
+                {
+                    _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar);
+                }
+            }
+            EditorGUI.EndDisabledGroup();
         }
 
         private static void UploadThis(AvatarUploadSetting avatar)
@@ -112,30 +138,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     EditorGUI.indentLevel++;
                     info.imageTakeEditorMode = (ImageTakeEditorMode)EditorGUILayout.EnumPopup("Take Image In", info.imageTakeEditorMode);
-                    EditorGUI.BeginDisabledGroup(!_cachedAvatar);
-                    if (_previewCameraManager != null)
-                    {
-                        _previewCameraManager.DrawPreview();
-                        if (IndentedButton("Finish Setting Camera Position"))
-                        {
-                            _previewCameraManager?.Finish();
-                            _previewCameraManager = null;
-                        }
-                    }
-                    else
-                    {
-                        if (IndentedButton("Configure Camera Position"))
-                        {
-                            _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar);
-                        }
-                    }
-                    EditorGUI.EndDisabledGroup();
                     EditorGUI.indentLevel--;
-                }
-                else
-                {
-                    _previewCameraManager?.Finish();
-                    _previewCameraManager = null;
                 }
                 info.versioningEnabled = EditorGUILayout.ToggleLeft("Versioning System", info.versioningEnabled);
                 if (info.versioningEnabled)
@@ -178,8 +181,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         private Camera _camera;
         private bool _prevLocked;
+        private Object[] _prevSelection;
+        private readonly Object[] _trackerTargets;
+
         private readonly VRCAvatarDescriptor _cachedAvatar;
-        private readonly UnityEditor.Editor _editor;
+        public Object Target => _cachedAvatar;
+
+        private readonly HashSet<UnityEditor.Editor> _editors;
         private readonly Scene _previewScene;
 
         public PreviewCameraManager([NotNull] UnityEditor.Editor editor,
@@ -187,7 +195,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             if (editor == null) throw new ArgumentNullException(nameof(editor));
             if (cachedAvatar == null) throw new ArgumentNullException(nameof(cachedAvatar));
-            _editor = editor;
+            _editors = new HashSet<UnityEditor.Editor> { editor };
             _cachedAvatar = cachedAvatar;
 
             if (EditorUtility.IsPersistent(cachedAvatar))
@@ -199,6 +207,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             _prevLocked = ActiveEditorTracker.sharedTracker.isLocked;
             ActiveEditorTracker.sharedTracker.isLocked = true;
+            _trackerTargets = ActiveEditorTracker.sharedTracker.activeEditors.Select(x => x.target).ToArray();
 
             _camera = EditorUtility.CreateGameObjectWithHideFlags("VRCCam Shim Camera", HideFlags.DontSave,
                     typeof(Camera))
@@ -211,6 +220,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _camera.scene = _previewScene.IsValid() ? _previewScene : cachedAvatar.gameObject.scene;
             cachedAvatar.PositionPortraitCamera(_camera.transform);
             EditorApplication.update += OnUpdate;
+            _prevSelection = Selection.objects;
             Selection.objects = new Object[] { _camera.gameObject };
         }
 
@@ -218,9 +228,16 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private Quaternion _cameraRotationOld;
         private void OnUpdate()
         {
+            if (_cachedAvatar == null || _editors.All(x => x == null))
+            {
+                Finish();
+                return;
+            }
             var transform = _camera.transform;
             if (_cameraPositionOld != transform.position || _cameraRotationOld != transform.rotation)
-                _editor.Repaint();
+                foreach (var editor in _editors)
+                    editor.Repaint();
+
             _cameraPositionOld = transform.position;
             _cameraRotationOld = transform.rotation;
         }
@@ -276,12 +293,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             Object.DestroyImmediate(_camera.gameObject);
             _camera = null;
-            Selection.objects = new []{_editor.target};
+            Selection.objects = _prevSelection;
             ActiveEditorTracker.sharedTracker.isLocked = _prevLocked;
 
             // ReSharper disable once PossiblyImpureMethodCallOnReadonlyVariable // IsValid doesn't change
             if (_previewScene.IsValid())
                 EditorSceneManager.ClosePreviewScene(_previewScene);
         }
+
+        public void AddEditor(UnityEditor.Editor editor) => _editors.Add(editor);
+        public void RemoveEditor(UnityEditor.Editor editor) => _editors.Remove(editor);
     }
 }

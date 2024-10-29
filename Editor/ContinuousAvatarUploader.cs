@@ -31,6 +31,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [NonSerialized] private State _guiState;
         [NonSerialized] private AvatarUploadSetting _currentUploadingAvatar;
         [SerializeField] private List<UploadErrorInfo> previousUploadErrors = new List<UploadErrorInfo>();
+        [SerializeField] private Vector2 uploadsScroll;
         [SerializeField] private Vector2 errorsScroll;
 
         [Serializable]
@@ -93,10 +94,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             EditorGUI.BeginDisabledGroup(uploadInProgress);
             _serialized.Update();
-            EditorGUILayout.PropertyField(_settingsOrGroups);
-            if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect()), "Clear Groups"))
-                _settingsOrGroups.arraySize = 0;
-            _serialized.ApplyModifiedProperties();
             Preferences.SleepSeconds = EditorGUILayout.FloatField(
                 new GUIContent("Sleep Seconds", "The time sleeps between upload"),
                 Preferences.SleepSeconds);
@@ -135,6 +132,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (GUILayout.Button("Start Upload"))
                     StartUpload(_builder);
             }
+
+            uploadsScroll = EditorGUILayout.BeginScrollView(uploadsScroll);
+            EditorGUILayout.PropertyField(_settingsOrGroups);
+            if (GUI.Button(EditorGUI.IndentedRect(EditorGUILayout.GetControlRect()), "Clear Settings"))
+                _settingsOrGroups.arraySize = 0;
+            _serialized.ApplyModifiedProperties();
+            EditorGUILayout.EndScrollView();
 
             EditorGUI.EndDisabledGroup();
 
@@ -241,6 +245,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             try
             {
                 _guiState = State.PreparingAvatar;
+                Repaint();
                 var uploadingAvatars = GetUploadingAvatars().ToArray();
                 _totalCount = uploadingAvatars.Length;
                 await Uploader.Upload(builder,
@@ -251,6 +256,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         _guiState = State.UploadingAvatar;
                         _currentUploadingAvatar = avatar;
                         _uploadingIndex = index;
+                        Repaint();
                     },
                     onException: (exception, avatar) =>
                     {
@@ -264,6 +270,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     {
                         _guiState = State.UploadedAvatar;
                         _currentUploadingAvatar = null;
+                        Repaint();
                     },
                     cancellationToken: _cancellationToken.Token);
             }
@@ -279,6 +286,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             finally
             {
                 _guiState = State.Configuring;
+                Repaint();
             }
 
             if (Preferences.ShowDialogWhenUploadFinished)
