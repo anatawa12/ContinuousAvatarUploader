@@ -245,6 +245,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             try
             {
                 _guiState = State.PreparingAvatar;
+                Repaint();
                 var uploadingAvatars = GetUploadingAvatars().ToArray();
                 _totalCount = uploadingAvatars.Length;
                 await Uploader.Upload(builder,
@@ -255,6 +256,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         _guiState = State.UploadingAvatar;
                         _currentUploadingAvatar = avatar;
                         _uploadingIndex = index;
+                        Repaint();
                     },
                     onException: (exception, avatar) =>
                     {
@@ -268,6 +270,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     {
                         _guiState = State.UploadedAvatar;
                         _currentUploadingAvatar = null;
+                        Repaint();
                     },
                     cancellationToken: _cancellationToken.Token);
             }
@@ -283,6 +286,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             finally
             {
                 _guiState = State.Configuring;
+                Repaint();
             }
 
             if (Preferences.ShowDialogWhenUploadFinished)
