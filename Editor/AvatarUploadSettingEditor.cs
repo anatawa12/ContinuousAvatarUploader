@@ -87,6 +87,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     UploadThis(avatar);
             PlatformSpecificInfo("PC Windows", avatar.windows);
             PlatformSpecificInfo("Quest", avatar.quest);
+            PlatformSpecificInfo("iOS", avatar.ios);
         }
 
         private static void UploadThis(AvatarUploadSetting avatar)

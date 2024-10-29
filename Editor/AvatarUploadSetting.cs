@@ -21,6 +21,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         public string avatarName;
         public MaySceneReference avatarDescriptor;
+        public PlatformSpecificInfo ios = new PlatformSpecificInfo()
+        {
+            versionNamePrefix = "ios"
+        };
         public PlatformSpecificInfo quest = new PlatformSpecificInfo()
         {
             versionNamePrefix = "quest"
@@ -31,7 +35,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         };
 
         public PlatformSpecificInfo GetCurrentPlatformInfo() =>
-            EditorUserBuildSettings.selectedBuildTargetGroup == BuildTargetGroup.Standalone ? windows : quest;
+            EditorUserBuildSettings.selectedBuildTargetGroup switch
+            {
+                BuildTargetGroup.Standalone => windows,
+                BuildTargetGroup.Android => quest,
+                BuildTargetGroup.iOS => ios,
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
         internal override AvatarUploadSetting[] Settings => new[] { this };
     }
