@@ -8,23 +8,30 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
-- iOS platform support `#76`
-- Group Group asset, which can group multiple AvatarGroup assets `#76`
 
 ### Changed
-- Uploader window improvement `#76`
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
-- Camera Position Editor is not working if two or more platforms are enabled `#76`
-- Camera Position Editor is not working fom Group editor `#76`
-- Upload in progress is shown after the upload is finished `#76`
-- Automatic enabling avatar is not working for nested avatar `#76`
 
 ### Security
+
+## [0.3.3] - 2024-10-29
+### Added
+- iOS platform support [`#76`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/76)
+- Group Group asset, which can group multiple AvatarGroup assets [`#76`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/76)
+
+### Changed
+- Uploader window improvement [`#76`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/76)
+
+### Fixed
+- Camera Position Editor is not working if two or more platforms are enabled [`#76`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/76)
+- Camera Position Editor is not working fom Group editor [`#76`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/76)
+- Upload in progress is shown after the upload is finished [`#76`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/76)
+- Automatic enabling avatar is not working for nested avatar [`#76`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/76)
 
 ## [0.3.2] - 2024-08-17
 ### Added
@@ -126,7 +133,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.2.6...v0.3.0
