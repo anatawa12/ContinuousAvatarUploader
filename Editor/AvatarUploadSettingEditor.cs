@@ -88,6 +88,25 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             PlatformSpecificInfo("PC Windows", avatar.windows);
             PlatformSpecificInfo("Quest", avatar.quest);
             PlatformSpecificInfo("iOS", avatar.ios);
+
+            EditorGUI.BeginDisabledGroup(!_cachedAvatar);
+            if (_previewCameraManager != null)
+            {
+                _previewCameraManager.DrawPreview();
+                if (IndentedButton("Finish Setting Camera Position"))
+                {
+                    _previewCameraManager?.Finish();
+                    _previewCameraManager = null;
+                }
+            }
+            else
+            {
+                if (IndentedButton("Configure Camera Position"))
+                {
+                    _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar);
+                }
+            }
+            EditorGUI.EndDisabledGroup();
         }
 
         private static void UploadThis(AvatarUploadSetting avatar)
@@ -113,30 +132,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     EditorGUI.indentLevel++;
                     info.imageTakeEditorMode = (ImageTakeEditorMode)EditorGUILayout.EnumPopup("Take Image In", info.imageTakeEditorMode);
-                    EditorGUI.BeginDisabledGroup(!_cachedAvatar);
-                    if (_previewCameraManager != null)
-                    {
-                        _previewCameraManager.DrawPreview();
-                        if (IndentedButton("Finish Setting Camera Position"))
-                        {
-                            _previewCameraManager?.Finish();
-                            _previewCameraManager = null;
-                        }
-                    }
-                    else
-                    {
-                        if (IndentedButton("Configure Camera Position"))
-                        {
-                            _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar);
-                        }
-                    }
-                    EditorGUI.EndDisabledGroup();
                     EditorGUI.indentLevel--;
-                }
-                else
-                {
-                    _previewCameraManager?.Finish();
-                    _previewCameraManager = null;
                 }
                 info.versioningEnabled = EditorGUILayout.ToggleLeft("Versioning System", info.versioningEnabled);
                 if (info.versioningEnabled)
