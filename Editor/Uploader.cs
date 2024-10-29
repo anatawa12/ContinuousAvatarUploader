@@ -354,7 +354,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 if (AvatarDescriptor != null)
                 {
-                    var index = 0;`
+                    var index = 0;
                     for (var transform = AvatarDescriptor.transform; transform != null; transform = transform.parent, index++)
                     {
                         transform.gameObject.SetActive(_oldActive[index]);
