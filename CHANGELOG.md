@@ -8,14 +8,21 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- iOS platform support `#76`
+- Group Group asset, which can group multiple AvatarGroup assets `#76`
 
 ### Changed
+- Uploader window improvement `#76`
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+- Camera Position Editor is not working if two or more platforms are enabled `#76`
+- Camera Position Editor is not working fom Group editor `#76`
+- Upload in progress is shown after the upload is finished `#76`
+- Automatic enabling avatar is not working for nested avatar `#76`
 
 ### Security
 
