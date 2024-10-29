@@ -325,7 +325,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         class InSceneAvatarScope : IUploadAvatarScope
         {
-            private readonly bool _oldEnabled;
+            private readonly List<bool> _oldActive;
             public VRCAvatarDescriptor AvatarDescriptor { get; }
 
             public InSceneAvatarScope(AvatarUploadSetting avatar)
@@ -340,15 +340,26 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 if (AvatarDescriptor != null)
                 {
-                    _oldEnabled = AvatarDescriptor.gameObject.activeSelf;
-                    AvatarDescriptor.gameObject.SetActive(true);
+                    _oldActive = new List<bool>();
+
+                    for (var transform = AvatarDescriptor.transform; transform != null; transform = transform.parent)
+                    {
+                        _oldActive.Add(transform.gameObject.activeSelf);
+                        transform.gameObject.SetActive(true);
+                    }
                 }
             }
 
             public void Dispose()
             {
                 if (AvatarDescriptor != null)
-                    AvatarDescriptor.gameObject.gameObject.SetActive(_oldEnabled);
+                {
+                    var index = 0;`
+                    for (var transform = AvatarDescriptor.transform; transform != null; transform = transform.parent, index++)
+                    {
+                        transform.gameObject.SetActive(_oldActive[index]);
+                    }
+                }
             }
         }
 
