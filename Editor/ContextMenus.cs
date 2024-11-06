@@ -54,7 +54,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [MenuItem(CreateFromSelectionInGameObject, true)]
         private static bool ValidateCreateAvatarUploadSettingGroupFromSelection()
         {
-            Debug.Log(string.Join(",", Selection.objects.Select(x => x.GetType())));
             return SelectionAreAvatarDescriptors();
         }
 
