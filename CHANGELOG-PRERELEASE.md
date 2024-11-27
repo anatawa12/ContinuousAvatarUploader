@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Unloaded scenes would be loaded upon upload completion `#85`
 
 ### Security
 
