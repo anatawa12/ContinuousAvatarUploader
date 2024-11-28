@@ -176,7 +176,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
     class OpeningSceneRestoreScope : IDisposable
     {
-        private readonly string[] _lastOpenedScenes;
+        private readonly (string path, bool isLoaded)[] _lastOpenedScenes;
 
         public OpeningSceneRestoreScope()
         {
@@ -185,8 +185,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 .ToArray();
             if (scenes.Any(x => x.isDirty))
                 EditorSceneManager.SaveOpenScenes();
-            var scenePaths = scenes.Select(x => x.path).ToArray();
-            _lastOpenedScenes = scenePaths.Any(string.IsNullOrEmpty) ? Array.Empty<string>() : scenePaths;
+            _lastOpenedScenes = scenes.Any(x => string.IsNullOrEmpty(x.path))
+                ? Array.Empty<(string path, bool isLoaded)>()
+                : scenes.Select(x => (x.path, x.isLoaded)).ToArray();
         }
 
         public void Dispose()
@@ -197,9 +198,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
             else
             {
-                EditorSceneManager.OpenScene(_lastOpenedScenes[0]);
-                foreach (var lastOpenedScene in _lastOpenedScenes.Skip(1))
-                    EditorSceneManager.OpenScene(lastOpenedScene, OpenSceneMode.Additive);
+                var tmp = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene);
+                foreach (var lastOpenedScene in _lastOpenedScenes)
+                {
+                    var mode = lastOpenedScene.isLoaded
+                        ? OpenSceneMode.Additive 
+                        : OpenSceneMode.AdditiveWithoutLoading;
+                    EditorSceneManager.OpenScene(lastOpenedScene.path, mode);
+                }
+                EditorSceneManager.CloseScene(tmp, true);
             }
         }
     }
