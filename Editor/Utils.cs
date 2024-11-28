@@ -185,10 +185,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 .ToArray();
             if (scenes.Any(x => x.isDirty))
                 EditorSceneManager.SaveOpenScenes();
-            _lastOpenedScenes = scenes
-                .Where(x => !string.IsNullOrEmpty(x.path))
-                .Select(x => (x.path, x.isLoaded))
-                .ToArray();
+            _lastOpenedScenes = scenes.Any(x => string.IsNullOrEmpty(x.path))
+                ? Array.Empty<(string path, bool isLoaded)>()
+                : scenes.Select(x => (x.path, x.isLoaded)).ToArray();
         }
 
         public void Dispose()
