@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog].
 
 ### Fixed
 - Unloaded scenes would be loaded upon upload completion `#85`
+- Added a `Upload All` button for `AvatarUploadSettingGroupGroup` `#78`
 
 ### Security
 
