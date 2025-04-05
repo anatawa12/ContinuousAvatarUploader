@@ -86,6 +86,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             if (onException == null) onException = Debug.LogException;
 
+            if (!Application.isBatchMode)
+
+            {
+                if (!EditorUtility.DisplayDialog("Continuous Avatar Uploader: VRCSDK Agreement",
+                        AgreementText,
+                        "OK", "NO"))
+                    throw new Exception("No Agreement");
+            }
+
             AssetDatabase.SaveAssets();
             using (var playmodeScope = new PreventEnteringPlayModeScope())
             using (new OpeningSceneRestoreScope())
@@ -222,6 +231,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // build avatar main process
             using (new SetBlueprintIdEveryFrame(pipelineManager, pipelineManager.blueprintId))
             {
+                await AddCopyrightAgreement(pipelineManager.blueprintId);
                 await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar,
                     thumbnailPath: picturePath,
                     cancellationToken: cancellationToken);
@@ -542,6 +552,27 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 return builder.ToString();
             }
+        }
+
+        public static string AgreementText =
+            "By clicking OK, I certify that I have the necessary rights to upload this content and that it will not infringe on any third-party legal or intellectual property rights.";
+
+        private static async Task AddCopyrightAgreement(string blueprint)
+        {
+            const string key = "VRCSdkControlPanel.CopyrightAgreement.ContentList";
+            var keyText = SessionState.GetString(key, "");
+            var list = string.IsNullOrEmpty(keyText) ? new List<string>() : SessionState.GetString(key, "").Split(';').ToList();
+            if (list.Contains(blueprint)) return;
+            list.Add(blueprint);
+            SessionState.SetString(key, string.Join(";", list));
+            
+            await VRCApi.ContentUploadConsent(new VRCAgreement
+            {
+                AgreementCode = "content.copyright.owned",
+                AgreementFulltext = AgreementText,
+                ContentId = blueprint,
+                Version = 1,
+            });
         }
 
         /// <summary>
