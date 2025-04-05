@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- Multi Editing Support for AvatarUploadsSetting `#91`
+  - You now can select multiple AvatarUploadSetting and edit them at once.
 
 ### Changed
 
