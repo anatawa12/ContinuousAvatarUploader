@@ -18,7 +18,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private Dictionary<int, CreateDescriptorContainer> _inspectorsDoctionary = new Dictionary<int, CreateDescriptorContainer>();
         private List<CreateDescriptorContainer> _inspectors = new List<CreateDescriptorContainer>();
         private VisualElement _inspector;
-        private const int CreatePerFrame = 1;
+        private const int CreatePerFrame = 5;
         private const int CreateInitial = 20;
 
         public override VisualElement CreateInspectorGUI()
