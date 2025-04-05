@@ -8,23 +8,30 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
-- Multi Editing Support for AvatarUploadsSetting `#91`
-  - You now can select multiple AvatarUploadSetting and edit them at once.
 
 ### Changed
-- Declare compatibility with VRCSDK 3.8.x `#90`
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
-- Unloaded scenes would be loaded upon upload completion `#85`
-- Added a `Upload All` button for `AvatarUploadSettingGroupGroup` `#78`
-- Fails to upload new avatar due to control panel problem `#92`
-- This faile was already uploaded error if thumbnail doesn't changed `#92`
 
 ### Security
+
+## [0.3.4] - 2025-04-05
+### Added
+- Multi Editing Support for AvatarUploadsSetting [`#91`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/91)
+  - You now can select multiple AvatarUploadSetting and edit them at once.
+
+### Changed
+- Declare compatibility with VRCSDK 3.8.x [`#90`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/90)
+
+### Fixed
+- Unloaded scenes would be loaded upon upload completion [`#85`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/85)
+- Added a `Upload All` button for `AvatarUploadSettingGroupGroup` [`#78`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/78)
+- Fails to upload new avatar due to control panel problem [`#92`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/92)
+- This faile was already uploaded error if thumbnail doesn't changed [`#92`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/92)
 
 ## [0.3.3] - 2024-10-29
 ### Added
@@ -140,7 +147,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.0...v0.3.1
