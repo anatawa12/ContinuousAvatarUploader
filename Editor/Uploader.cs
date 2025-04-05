@@ -322,6 +322,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 var avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
                 if (!avatarDescriptor) return;
 
+                // PreparePipelineManager here since we have to save changes to prefab file
+                PreparePipelineManager(avatarDescriptor.gameObject);
+
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
                 var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
                 newGameObject.SetActive(true);
