@@ -220,9 +220,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             // build avatar main process
-            await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar,
-                thumbnailPath: picturePath,
-                cancellationToken: cancellationToken);
+            using (new SetBlueprintIdEveryFrame(pipelineManager, pipelineManager.blueprintId))
+            {
+                await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar,
+                    thumbnailPath: picturePath,
+                    cancellationToken: cancellationToken);
+            }
 
             // get uploaded avatar info
             vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true,
@@ -538,6 +541,41 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 builder.Append('"');
 
                 return builder.ToString();
+            }
+        }
+
+        /// <summary>
+        /// This class sets the blueprintId every frame until disposed.
+        ///
+        /// This is the workaround for VRCSDK control panel bug
+        /// https://feedback.vrchat.com/sdk-bug-reports/p/calling-ivrcsdkavatarbuilderapibuildandupload-just-after-changing-scene-may-resu
+        /// </summary>
+        class SetBlueprintIdEveryFrame : IDisposable
+        {
+            private readonly PipelineManager _pipelineManager;
+            private readonly string _blueprintId;
+
+            public SetBlueprintIdEveryFrame(PipelineManager pipelineManager, string blueprintId)
+            {
+                _pipelineManager = pipelineManager;
+                _blueprintId = blueprintId;
+                EditorApplication.update += Update;
+            }
+
+            private void Update()
+            {
+                if (_pipelineManager == null) return;
+                if (_pipelineManager.blueprintId != _blueprintId)
+                {
+                    _pipelineManager.blueprintId = _blueprintId;
+                    EditorUtility.SetDirty(_pipelineManager);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(_pipelineManager);
+                }
+            }
+
+            public void Dispose()
+            {
+                EditorApplication.update -= Update;
             }
         }
     }
