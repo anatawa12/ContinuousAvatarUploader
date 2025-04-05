@@ -393,7 +393,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 // pipelineManager.AssignId() doesn't mark pipeline manager dirty
                 pipelineManager.AssignId();
                 EditorUtility.SetDirty(pipelineManager);
-                EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(pipelineManager);
+                if (pipelineManager.gameObject.scene.IsValid())
+                    EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
             }
 
             return pipelineManager;
