@@ -340,6 +340,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
                 var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
+                newGameObject.name = avatarDescriptor.gameObject.name;
                 newGameObject.SetActive(true);
                 AvatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
                 EditorSceneManager.SaveScene(scene, PrefabScenePath);
