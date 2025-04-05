@@ -16,21 +16,161 @@ using Object = UnityEngine.Object;
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     [CustomEditor(typeof(AvatarUploadSetting))]
+    [CanEditMultipleObjects]
     public class AvatarUploadSettingEditor : UnityEditor.Editor
     {
         private VRCAvatarDescriptor _cachedAvatar;
         private bool _settingAvatar;
         [CanBeNull] private static PreviewCameraManager _previewCameraManager;
 
+        private SerializedProperty _name = null!;
+        private SerializedProperty _avatarName = null!;
+        private SerializedProperty _avatarDescriptor = null!;
+        private SerializedProperty _windows = null!;
+        private SerializedProperty _quest = null!;
+        private SerializedProperty _ios = null!;
+
+        private void OnEnable()
+        {
+            _name = serializedObject.FindProperty("m_Name");
+            _avatarName = serializedObject.FindProperty(nameof(AvatarUploadSetting.avatarName));
+            _avatarDescriptor = serializedObject.FindProperty(nameof(AvatarUploadSetting.avatarDescriptor));
+
+            _windows = serializedObject.FindProperty(nameof(AvatarUploadSetting.windows));
+            _quest = serializedObject.FindProperty(nameof(AvatarUploadSetting.quest));
+            _ios = serializedObject.FindProperty(nameof(AvatarUploadSetting.ios));
+        }
+
+        private void MultipleAvatarDescriptor(AvatarUploadSetting[] avatars)
+        {
+            EditorGUI.BeginDisabledGroup(true);
+            if (_avatarDescriptor.hasMultipleDifferentValues)
+            {
+                var position = EditorGUILayout.GetControlRect(true, 18f);
+                position = EditorGUI.PrefixLabel(position, Labels.Avatar);
+                GUI.Label(position, Labels.MixedValueContent, EditorStyles.objectField);
+                GUIStyle buttonStyle = "ObjectFieldButton";
+                Rect position1 = new Rect(position.xMax - 19f, position.y, 19f, position.height);
+                GUI.Label(position1, GUIContent.none, buttonStyle);
+            }
+            else
+            {
+                var descriptor = avatars[0].avatarDescriptor;
+                var avatar = descriptor.TryResolve();
+                if (avatar != null || descriptor.IsNull())
+                {
+                    EditorGUILayout.ObjectField(Labels.Avatar, avatar, typeof(VRCAvatarDescriptor), true);
+                }
+                else
+                {
+                    EditorGUILayout.LabelField(Labels.Avatar, new GUIContent(_avatarName.stringValue));
+                    EditorGUILayout.ObjectField("In scene", descriptor.asset, typeof(SceneAsset),
+                        false);
+                }
+            }
+            EditorGUI.EndDisabledGroup();
+        }
+
+        private void SingleAvatarDescriptor(SerializedProperty avatarDescriptor)
+        {
+            var descriptor = (MaySceneReference)avatarDescriptor.boxedValue;
+            if (descriptor.IsNull())
+                _settingAvatar = true;
+            if (_settingAvatar)
+            {
+                _cachedAvatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField("Set Avatar: ",
+                    null, typeof(VRCAvatarDescriptor), true);
+
+                if (_cachedAvatar)
+                {
+                    avatarDescriptor.boxedValue = new MaySceneReference(_cachedAvatar);
+                    // might be reverted if it's individual asset but
+                    // this is good for DescriptorSet
+                    _name.stringValue = _avatarName.stringValue = _cachedAvatar.name;
+                    _settingAvatar = false;
+                }
+
+                EditorGUI.BeginDisabledGroup(descriptor.IsNull());
+                if (GUILayout.Button("Chancel Change Avatar"))
+                    _settingAvatar = false;
+                EditorGUI.EndDisabledGroup();
+            }
+            else
+            {
+                if (!_cachedAvatar)
+                    _cachedAvatar = descriptor.TryResolve() as VRCAvatarDescriptor;
+                if (_cachedAvatar)
+                {
+                    EditorGUILayout.ObjectField(Labels.Avatar, _cachedAvatar, typeof(VRCAvatarDescriptor), true);
+                    _avatarName.stringValue = _cachedAvatar.name;
+                }
+                else
+                {
+                    EditorGUILayout.LabelField(Labels.Avatar,  new GUIContent(_avatarName.stringValue));
+                    EditorGUILayout.ObjectField("In scene", descriptor.asset, typeof(SceneAsset),
+                        false);
+                }
+
+                if (GUILayout.Button("Change Avatar"))
+                    _settingAvatar = true;
+            }
+        }
+
         public override void OnInspectorGUI()
         {
-            var asset = (AvatarUploadSetting)target;
-            EditorGUI.BeginChangeCheck();
+            var avatars = targets.Cast<AvatarUploadSetting>().ToArray();
 
-            AvatarDescriptors(asset);
+            if (serializedObject.isEditingMultipleObjects)
+            {
+                MultipleAvatarDescriptor(avatars);
+            }
+            else
+            {
+                SingleAvatarDescriptor(_avatarDescriptor);
+            }
 
-            if (EditorGUI.EndChangeCheck())
-                EditorUtility.SetDirty(asset);
+            {
+                var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
+                using (new EditorGUI.DisabledGroupScope(enabledAll))
+                    if (GUILayout.Button("Upload This Avatar"))
+                        UploadThis(avatars);
+            }
+
+            DrawPlatformSpecificInfo(Labels.PCWindows, _windows);
+            DrawPlatformSpecificInfo(Labels.QuestAndroid, _quest);
+            DrawPlatformSpecificInfo(Labels.IOS, _ios);
+
+            if (serializedObject.isEditingMultipleObjects)
+            {
+                EditorGUILayout.LabelField("Editing Camera Position is not supported in multi-editing");
+            }
+            else
+            {
+                EditorGUI.BeginDisabledGroup(
+                    !_cachedAvatar
+                    // previewing other avatar
+                    || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
+                );
+                if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
+                {
+                    _previewCameraManager.AddEditor(this);
+                    _previewCameraManager.DrawPreview();
+                    if (IndentedButton("Finish Setting Camera Position"))
+                    {
+                        _previewCameraManager?.Finish();
+                        _previewCameraManager = null;
+                    }
+                }
+                else
+                {
+                    if (IndentedButton("Configure Camera Position"))
+                    {
+                        _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar!);
+                    }
+                }
+
+                EditorGUI.EndDisabledGroup();
+            }
         }
 
         private void OnDisable()
@@ -41,84 +181,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
-        private void AvatarDescriptors(AvatarUploadSetting avatar)
-        {
-            if (avatar.avatarDescriptor.IsNull())
-                _settingAvatar = true;
-            if (_settingAvatar)
-            {
-                _cachedAvatar = (VRCAvatarDescriptor)EditorGUILayout.ObjectField("Set Avatar: ", 
-                    null, typeof(VRCAvatarDescriptor), true);
-                
-                if (_cachedAvatar)
-                {
-                    avatar.avatarDescriptor = new MaySceneReference(_cachedAvatar);
-                    // might be reverted if it's individual asset but
-                    // this is good for DescriptorSet
-                    avatar.name = avatar.avatarName = _cachedAvatar.name;
-                    _settingAvatar = false;
-                }
-
-                EditorGUI.BeginDisabledGroup(avatar.avatarDescriptor.IsNull());
-                if (GUILayout.Button("Chancel Change Avatar"))
-                    _settingAvatar = false;
-                EditorGUI.EndDisabledGroup();
-            }
-            else
-            {
-                if (!_cachedAvatar)
-                    _cachedAvatar = avatar.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
-                if (_cachedAvatar)
-                {
-                    EditorGUILayout.ObjectField("Avatar", _cachedAvatar, typeof(VRCAvatarDescriptor), true);
-                    avatar.avatarName = _cachedAvatar.name;
-                }
-                else
-                {
-                    EditorGUILayout.LabelField("Avatar", avatar.avatarName);
-                    EditorGUILayout.ObjectField("In scene", avatar.avatarDescriptor.asset, typeof(SceneAsset), false);
-                }
-
-                if (GUILayout.Button("Change Avatar"))
-                    _settingAvatar = true;
-            }
-
-            using (new EditorGUI.DisabledGroupScope(!avatar.GetCurrentPlatformInfo().enabled))
-                if (GUILayout.Button("Upload This Avatar"))
-                    UploadThis(avatar);
-            PlatformSpecificInfo("PC Windows", avatar.windows);
-            PlatformSpecificInfo("Quest", avatar.quest);
-            PlatformSpecificInfo("iOS", avatar.ios);
-
-            EditorGUI.BeginDisabledGroup(
-                !_cachedAvatar
-                // previewing other avatar
-                || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
-            );
-            if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
-            {
-                _previewCameraManager.AddEditor(this);
-                _previewCameraManager.DrawPreview();
-                if (IndentedButton("Finish Setting Camera Position"))
-                {
-                    _previewCameraManager?.Finish();
-                    _previewCameraManager = null;
-                }
-            }
-            else
-            {
-                if (IndentedButton("Configure Camera Position"))
-                {
-                    _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar);
-                }
-            }
-            EditorGUI.EndDisabledGroup();
-        }
-
-        private static void UploadThis(AvatarUploadSetting avatar)
+        private static void UploadThis(AvatarUploadSetting[] avatars)
         {
             var uploader = EditorWindow.GetWindow<ContinuousAvatarUploader>();
-            uploader.settingsOrGroups = new AvatarUploadSettingOrGroup[] { avatar };
+            uploader.settingsOrGroups = avatars.ToArray<AvatarUploadSettingOrGroup>();
             if (!uploader.StartUpload())
             {
                 EditorUtility.DisplayDialog("Failed to start upload",
@@ -126,39 +192,74 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
-        private void PlatformSpecificInfo(string name, PlatformSpecificInfo info)
+        private void DrawPlatformSpecificInfo(GUIContent name, SerializedProperty infoProp)
         {
-            info.enabled = EditorGUILayout.ToggleLeft(name, info.enabled);
+            // props
+            var enabled = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.enabled));
+            var updateImage = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.updateImage));
+            var imageTakeEditorMode = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.imageTakeEditorMode));
+            var versioningEnabled = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.versioningEnabled));
+            var versionNamePrefix = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.versionNamePrefix));
+            var gitEnabled = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.gitEnabled));
+            var tagPrefix = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.tagPrefix));
+            var tagSuffix = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.tagSuffix));
 
-            if (info.enabled)
+            ExEditorGUILayout.ToggleLeft(enabled, name);
+
+            ToggleScope(enabled, () =>
             {
-                EditorGUI.indentLevel++;
-                info.updateImage = EditorGUILayout.ToggleLeft("update Image", info.updateImage);
-                if (info.updateImage)
+                ExEditorGUILayout.ToggleLeft(updateImage, Labels.UpdateImage);
+                ToggleScope(updateImage, () =>
                 {
-                    EditorGUI.indentLevel++;
-                    info.imageTakeEditorMode = (ImageTakeEditorMode)EditorGUILayout.EnumPopup("Take Image In", info.imageTakeEditorMode);
-                    EditorGUI.indentLevel--;
-                }
-                info.versioningEnabled = EditorGUILayout.ToggleLeft("Versioning System", info.versioningEnabled);
-                if (info.versioningEnabled)
+                    EditorGUILayout.PropertyField(imageTakeEditorMode, Labels.TakeImageIn);
+                });
+                ExEditorGUILayout.ToggleLeft(versioningEnabled, Labels.VersioningSystem);
+                ToggleScope(versioningEnabled, () =>
                 {
-                    EditorGUI.indentLevel++;
-                    info.versionNamePrefix = EditorGUILayout.TextField("Version Prefix", info.versionNamePrefix);
-                    EditorGUILayout.LabelField($"'({info.versionNamePrefix}<version>)'will be added in avatar description");
-                    info.gitEnabled = EditorGUILayout.ToggleLeft("git tagging", info.gitEnabled);
-                    if (info.gitEnabled)
+                    EditorGUILayout.PropertyField(versionNamePrefix, Labels.VersionNamePrefix);
+                    if (!versionNamePrefix.hasMultipleDifferentValues)
+                        EditorGUILayout.LabelField($"'({versionNamePrefix.stringValue}<version>)'will be added in avatar description");
+                    ExEditorGUILayout.ToggleLeft(gitEnabled, Labels.GitTagging);
+                    ToggleScope(gitEnabled, () =>
                     {
-                        EditorGUI.indentLevel++;
-                        info.tagPrefix = EditorGUILayout.TextField("Tag Prefix", info.tagPrefix);
-                        info.tagSuffix = EditorGUILayout.TextField("Tag Suffix", info.tagSuffix);
-                        EditorGUILayout.LabelField($"tag name will be '{info.tagPrefix}<version>{info.tagSuffix}'");
-                        EditorGUI.indentLevel--;
-                    }
-                    EditorGUI.indentLevel--;
-                }
+                        EditorGUILayout.PropertyField(tagPrefix, Labels.TagPrefix);
+                        EditorGUILayout.PropertyField(tagSuffix, Labels.TagSuffix);
+                        if (!tagPrefix.hasMultipleDifferentValues && !tagSuffix.hasMultipleDifferentValues)
+                            EditorGUILayout.LabelField($"tag name will be '{tagPrefix.stringValue}<version>{tagSuffix.stringValue}'");
+                    });
+                });
+            });
+        }
+
+        private void ToggleScope(SerializedProperty prop, Action scope)
+        {
+            if (prop.boolValue || prop.hasMultipleDifferentValues)
+            {
+                EditorGUI.BeginDisabledGroup(prop.hasMultipleDifferentValues);
+                EditorGUI.indentLevel++;
+                scope();
                 EditorGUI.indentLevel--;
+                EditorGUI.EndDisabledGroup();
             }
+        }
+
+        static class Labels
+        {
+            public static readonly GUIContent Avatar = new("Avatar");
+
+            public static readonly GUIContent PCWindows = new("PC Windows");
+            public static readonly GUIContent QuestAndroid = new("Quest / Android");
+            public static readonly GUIContent IOS = new("iOS");
+
+            public static readonly GUIContent UpdateImage = new("Update Image on Upload");
+            public static readonly GUIContent TakeImageIn = new("Take Image In");
+            public static readonly GUIContent VersioningSystem = new("Versioning System");
+            public static readonly GUIContent VersionNamePrefix = new("Version Prefix");
+            public static readonly GUIContent GitTagging = new("git tagging");
+            public static readonly GUIContent TagPrefix = new("Tag Prefix");
+            public static readonly GUIContent TagSuffix = new("Tag Suffix");
+            
+            public static readonly GUIContent MixedValueContent = EditorGUIUtility.TrTextContent("—", "Mixed Values");
         }
 
         private static void HorizontalLine(float regionHeight = 18f, float lineHeight = 1f)
