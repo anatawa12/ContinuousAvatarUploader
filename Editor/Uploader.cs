@@ -233,8 +233,22 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // is fixed, this process may not required
             if (platformInfo.updateImage && !uploadingNewAvatar)
             {
-                await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
-                    cancellationToken: cancellationToken);
+                try
+                {
+                    await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
+                        cancellationToken: cancellationToken);
+                }
+                catch (UploadException e)
+                {
+                    if (e.Message.Contains("This file was already uploaded"))
+                    {
+                        Debug.Log("Uploading image skipped: image already uploaded");
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
             }
 
             // update description
