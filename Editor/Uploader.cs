@@ -86,6 +86,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             if (onException == null) onException = Debug.LogException;
 
+            if (!Application.isBatchMode)
+
+            {
+                if (!EditorUtility.DisplayDialog("Continuous Avatar Uploader: VRCSDK Agreement",
+                        AgreementText,
+                        "OK", "NO"))
+                    throw new Exception("No Agreement");
+            }
+
             AssetDatabase.SaveAssets();
             using (var playmodeScope = new PreventEnteringPlayModeScope())
             using (new OpeningSceneRestoreScope())
@@ -220,9 +229,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             // build avatar main process
-            await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar,
-                thumbnailPath: picturePath,
-                cancellationToken: cancellationToken);
+            using (new SetBlueprintIdEveryFrame(pipelineManager, pipelineManager.blueprintId))
+            {
+                await AddCopyrightAgreement(pipelineManager.blueprintId);
+                await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar,
+                    thumbnailPath: picturePath,
+                    cancellationToken: cancellationToken);
+            }
 
             // get uploaded avatar info
             vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true,
@@ -233,8 +246,22 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // is fixed, this process may not required
             if (platformInfo.updateImage && !uploadingNewAvatar)
             {
-                await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
-                    cancellationToken: cancellationToken);
+                try
+                {
+                    await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
+                        cancellationToken: cancellationToken);
+                }
+                catch (UploadException e)
+                {
+                    if (e.Message.Contains("This file was already uploaded"))
+                    {
+                        Debug.Log("Uploading image skipped: image already uploaded");
+                    }
+                    else
+                    {
+                        throw;
+                    }
+                }
             }
 
             // update description
@@ -308,8 +335,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 var avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
                 if (!avatarDescriptor) return;
 
+                // PreparePipelineManager here since we have to save changes to prefab file
+                PreparePipelineManager(avatarDescriptor.gameObject);
+
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
                 var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
+                newGameObject.name = avatarDescriptor.gameObject.name;
                 newGameObject.SetActive(true);
                 AvatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
                 EditorSceneManager.SaveScene(scene, PrefabScenePath);
@@ -379,7 +410,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 // pipelineManager.AssignId() doesn't mark pipeline manager dirty
                 pipelineManager.AssignId();
                 EditorUtility.SetDirty(pipelineManager);
-                EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(pipelineManager);
+                if (pipelineManager.gameObject.scene.IsValid())
+                    EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
             }
 
             return pipelineManager;
@@ -519,6 +552,62 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 builder.Append('"');
 
                 return builder.ToString();
+            }
+        }
+
+        public static string AgreementText =
+            "By clicking OK, I certify that I have the necessary rights to upload this content and that it will not infringe on any third-party legal or intellectual property rights.";
+
+        private static async Task AddCopyrightAgreement(string blueprint)
+        {
+            const string key = "VRCSdkControlPanel.CopyrightAgreement.ContentList";
+            var keyText = SessionState.GetString(key, "");
+            var list = string.IsNullOrEmpty(keyText) ? new List<string>() : SessionState.GetString(key, "").Split(';').ToList();
+            if (list.Contains(blueprint)) return;
+            list.Add(blueprint);
+            SessionState.SetString(key, string.Join(";", list));
+            
+            await VRCApi.ContentUploadConsent(new VRCAgreement
+            {
+                AgreementCode = "content.copyright.owned",
+                AgreementFulltext = AgreementText,
+                ContentId = blueprint,
+                Version = 1,
+            });
+        }
+
+        /// <summary>
+        /// This class sets the blueprintId every frame until disposed.
+        ///
+        /// This is the workaround for VRCSDK control panel bug
+        /// https://feedback.vrchat.com/sdk-bug-reports/p/calling-ivrcsdkavatarbuilderapibuildandupload-just-after-changing-scene-may-resu
+        /// </summary>
+        class SetBlueprintIdEveryFrame : IDisposable
+        {
+            private readonly PipelineManager _pipelineManager;
+            private readonly string _blueprintId;
+
+            public SetBlueprintIdEveryFrame(PipelineManager pipelineManager, string blueprintId)
+            {
+                _pipelineManager = pipelineManager;
+                _blueprintId = blueprintId;
+                EditorApplication.update += Update;
+            }
+
+            private void Update()
+            {
+                if (_pipelineManager == null) return;
+                if (_pipelineManager.blueprintId != _blueprintId)
+                {
+                    _pipelineManager.blueprintId = _blueprintId;
+                    EditorUtility.SetDirty(_pipelineManager);
+                    PrefabUtility.RecordPrefabInstancePropertyModifications(_pipelineManager);
+                }
+            }
+
+            public void Dispose()
+            {
+                EditorApplication.update -= Update;
             }
         }
     }

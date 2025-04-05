@@ -21,6 +21,8 @@ The format is based on [Keep a Changelog].
 ### Fixed
 - Unloaded scenes would be loaded upon upload completion `#85`
 - Added a `Upload All` button for `AvatarUploadSettingGroupGroup` `#78`
+- Fails to upload new avatar due to control panel problem `#92`
+- This faile was already uploaded error if thumbnail doesn't changed `#92`
 
 ### Security
 
