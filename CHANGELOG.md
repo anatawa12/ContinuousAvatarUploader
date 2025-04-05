@@ -16,9 +16,12 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- Upload this avatar button condition is inverted `#93`
 
 ### Security
+
+## [0.3.5] - 2025-04-05
+### Fixed
+- Upload this avatar button condition is inverted [`#93`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/93)
 
 ## [0.3.4] - 2025-04-05
 ### Added
@@ -148,7 +151,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.4...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.5...HEAD
+[0.3.5]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.1...v0.3.2
