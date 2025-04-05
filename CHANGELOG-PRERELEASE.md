@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Upload this avatar button condition is inverted `#93`
 
 ### Security
 

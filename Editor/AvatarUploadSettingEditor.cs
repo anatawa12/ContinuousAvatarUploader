@@ -131,7 +131,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             {
                 var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
-                using (new EditorGUI.DisabledGroupScope(enabledAll))
+                using (new EditorGUI.DisabledGroupScope(!enabledAll))
                     if (GUILayout.Button("Upload This Avatar"))
                         UploadThis(avatars);
             }
