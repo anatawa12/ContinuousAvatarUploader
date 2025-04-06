@@ -16,9 +16,12 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- Incompatibility with older VRCSDK `#96`
 
 ### Security
+
+## [0.3.6] - 2025-04-06
+### Fixed
+- Incompatibility with older VRCSDK [`#96`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/96)
 
 ## [0.3.5] - 2025-04-05
 ### Fixed
@@ -158,7 +161,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.5...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.6...HEAD
+[0.3.6]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.4...v0.3.5
 [0.3.4]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.2...v0.3.3
