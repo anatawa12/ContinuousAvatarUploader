@@ -118,6 +118,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public override void OnInspectorGUI()
         {
+            serializedObject.Update();
             var avatars = targets.Cast<AvatarUploadSetting>().ToArray();
 
             if (serializedObject.isEditingMultipleObjects)
@@ -171,6 +172,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 EditorGUI.EndDisabledGroup();
             }
+
+            serializedObject.ApplyModifiedProperties();
         }
 
         private void OnDisable()
