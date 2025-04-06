@@ -558,6 +558,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public static string AgreementText =
             "By clicking OK, I certify that I have the necessary rights to upload this content and that it will not infringe on any third-party legal or intellectual property rights.";
 
+#if CAU_VRCSDK_BASE_3_8_0
         private static async Task AddCopyrightAgreement(string blueprint)
         {
             const string key = "VRCSdkControlPanel.CopyrightAgreement.ContentList";
@@ -575,6 +576,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 Version = 1,
             });
         }
+#else
+        private static Task AddCopyrightAgreement(string blueprint) => Task.CompletedTask;
+#endif
 
         /// <summary>
         /// This class sets the blueprintId every frame until disposed.
