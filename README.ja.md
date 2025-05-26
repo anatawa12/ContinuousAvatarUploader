@@ -43,13 +43,13 @@
 
 各プラットフォーム向けビルドについて、Continuous Avatar Uploaderの補助機能は個別にon/offすることが出来ます。
 
-> **Note**
->
-> Windows 環境においては、[VRChat SDKのバグにより](https://feedback.vrchat.com/sdk-bug-reports/p/uploading-avatar-may-freeze-when-antivirus-software-holds-handle-for-lastly-uplo)、ウイルス対策ソフトのリアルタイムスキャンが原因でアップロードがフリーズすることがあります。
-> もしフリーズすることがあれば、以下のいずれかの対処を行うことができると思われます。
-> - macOS か linux 環境に移行する
-> - リアルタイムスキャンが終わるまで十分待つよう、Sleep Seconds を大きくする。
-> - 自己責任で `%LOCALAPPDATA%\Temp\CompanyName\ProductName\` をリアルタイムスキャンの除外フォルダに追加する。セキュリティホールになるので気をつけてください。
+##### Note: アンチウイルスソフトのリアルタイムスキャンとの互換性に関するSDKのバグについて
+
+Windows 環境においては、[VRChat SDKのバグにより](https://feedback.vrchat.com/sdk-bug-reports/p/uploading-avatar-may-freeze-when-antivirus-software-holds-handle-for-lastly-uplo)、ウイルス対策ソフトのリアルタイムスキャンが原因でアップロードがフリーズすることがあります。
+もしフリーズすることがあれば、以下のいずれかの対処を行うことができると思われます。
+- macOS か linux 環境に移行する (一般的に、他のプロセスがファイルを開いていてもファイルを削除できるためこの手の問題になることが少ないです)
+- リアルタイムスキャンが終わるまで十分待つよう、Sleep Seconds を大きくする (ウイルス対策ソフトの処理が終わるとハンドルが解放されて削除できるようになるため)
+- 自己責任で `%LOCALAPPDATA%\Temp\CompanyName\ProductName\` をリアルタイムスキャンの除外フォルダに追加する。セキュリティホールになるので気をつけてください。 (そもそもウイルス対策ソフトがそのハンドルを持つことをなくす)
 
 #### Versioning System
 
