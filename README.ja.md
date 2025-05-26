@@ -43,6 +43,14 @@
 
 各プラットフォーム向けビルドについて、Continuous Avatar Uploaderの補助機能は個別にon/offすることが出来ます。
 
+> **Note**
+>
+> Windows 環境においては、[VRChat SDKのバグにより](https://feedback.vrchat.com/sdk-bug-reports/p/uploading-avatar-may-freeze-when-antivirus-software-holds-handle-for-lastly-uplo)、ウイルス対策ソフトのリアルタイムスキャンが原因でアップロードがフリーズすることがあります。
+> もしフリーズすることがあれば、以下のいずれかの対処を行うことができると思われます。
+> - macOS か linux 環境に移行する
+> - リアルタイムスキャンが終わるまで十分待つよう、Sleep Seconds を大きくする。
+> - 自己責任で `%LOCALAPPDATA%\Temp\CompanyName\ProductName\` をリアルタイムスキャンの除外フォルダに追加する。セキュリティホールになるので気をつけてください。
+
 #### Versioning System
 
 アバターの説明欄にアバターのバージョン番号を付加する機能です。カッコの中に接頭辞付きでバージョン番号を入れる想定です。
