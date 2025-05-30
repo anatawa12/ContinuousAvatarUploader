@@ -34,13 +34,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [SerializeField] private Vector2 uploadsScroll;
         [SerializeField] private Vector2 errorsScroll;
 
-        [Serializable]
-        private struct UploadErrorInfo
-        {
-            public string message;
-            public AvatarUploadSetting uploadingAvatar;
-        }
-
         private SerializedObject _serialized;
         private SerializedProperty _settingsOrGroups;
 
@@ -152,6 +145,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     EditorGUILayout.ObjectField("Uploading", previousUploadError.uploadingAvatar,
                         typeof(AvatarUploadSetting), false);
+                    EditorGUILayout.EnumPopup("For", previousUploadError.targetPlatform);
                     EditorGUILayout.TextArea(previousUploadError.message);
                 }
             }
@@ -264,6 +258,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         previousUploadErrors.Add(new UploadErrorInfo
                         {
                             uploadingAvatar = avatar,
+                            targetPlatform = Uploader.GetCurrentTargetPlatform(),
                             message = exception.ToString()
                         });
                     },

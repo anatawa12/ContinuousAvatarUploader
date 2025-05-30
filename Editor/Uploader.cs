@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -54,6 +55,56 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 "OK", "NO");
         }
 
+        public static TargetPlatform GetCurrentTargetPlatform() =>
+            EditorUserBuildSettings.selectedBuildTargetGroup switch
+            {
+                BuildTargetGroup.Standalone => TargetPlatform.Windows,
+                BuildTargetGroup.Android => TargetPlatform.Android,
+                BuildTargetGroup.iOS => TargetPlatform.IOS,
+                _ => TargetPlatform.LastIndex,
+            };
+
+        private static BuildTarget GetBuildTarget(TargetPlatform platform) => platform switch
+        {
+            TargetPlatform.Windows => BuildTarget.StandaloneWindows64,
+            TargetPlatform.Android => BuildTarget.Android,
+            TargetPlatform.IOS => BuildTarget.iOS,
+            _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
+        };
+
+        private static BuildTargetGroup GetBuildTargetGroup(TargetPlatform platform) => platform switch
+        {
+            TargetPlatform.Windows => BuildTargetGroup.Standalone,
+            TargetPlatform.Android => BuildTargetGroup.Android,
+            TargetPlatform.IOS => BuildTargetGroup.iOS,
+            _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
+        };
+
+        public static void StartSwitchTargetPlatform(TargetPlatform platform) => 
+            EditorUserBuildSettings.SwitchActiveBuildTarget(GetBuildTargetGroup(platform), GetBuildTarget(platform));
+
+        [CanBeNull] private static Func<BuildTarget, bool> _isPlatformSupportLoadedByBuildTargetMethod = null;
+
+        public static bool IsBuildSupportedInstalled(TargetPlatform platform)
+        {
+            if (_isPlatformSupportLoadedByBuildTargetMethod == null)
+            {
+                var moduleManagerType =
+                    typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.Modules.ModuleManager");
+                var isPlatformSupportLoadedByBuildTargetMethod =
+                    moduleManagerType.GetMethod("IsPlatformSupportLoadedByBuildTarget",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null,
+                        new[] { typeof(BuildTarget) }, null);
+                if (isPlatformSupportLoadedByBuildTargetMethod == null)
+                    throw new Exception("IsPlatformSupportLoadedByBuildTargetMethod not found");
+                _isPlatformSupportLoadedByBuildTargetMethod =
+                    (Func<BuildTarget, bool>)Delegate.CreateDelegate(typeof(Func<BuildTarget, bool>),
+                        isPlatformSupportLoadedByBuildTargetMethod);
+            }
+
+            return _isPlatformSupportLoadedByBuildTargetMethod(GetBuildTarget(platform));
+        }
+
         public delegate void StartUpload(AvatarUploadSetting avatr, int index);
 
         public static async Task Upload(
@@ -92,6 +143,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     {
                         onException(e, avatar);
                     }
+
                     onFinishUpload?.Invoke(avatar);
 
                     await Task.Delay(sleepMilliseconds, cancellationToken);
@@ -193,6 +245,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         {
                             await Utils.ExitPlayMode();
                         }
+
                         if (!avatarDescriptor) avatarDescriptor = ResolveAvatar("exited play mode");
                     }
 
@@ -378,7 +431,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (AvatarDescriptor != null)
                 {
                     var index = 0;
-                    for (var transform = AvatarDescriptor.transform; transform != null; transform = transform.parent, index++)
+                    for (var transform = AvatarDescriptor.transform;
+                         transform != null;
+                         transform = transform.parent, index++)
                     {
                         transform.gameObject.SetActive(_oldActive[index]);
                     }
@@ -388,7 +443,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private static IUploadAvatarScope LoadAvatar(AvatarUploadSetting avatar) =>
             avatar.avatarDescriptor.IsAssetReference()
-                ? (IUploadAvatarScope) new AssetUploadAvatarScope(avatar)
+                ? (IUploadAvatarScope)new AssetUploadAvatarScope(avatar)
                 : new InSceneAvatarScope(avatar);
 
         private static PipelineManager PreparePipelineManager(GameObject gameObject)
@@ -555,11 +610,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             const string key = "VRCSdkControlPanel.CopyrightAgreement.ContentList";
             var keyText = SessionState.GetString(key, "");
-            var list = string.IsNullOrEmpty(keyText) ? new List<string>() : SessionState.GetString(key, "").Split(';').ToList();
+            var list = string.IsNullOrEmpty(keyText)
+                ? new List<string>()
+                : SessionState.GetString(key, "").Split(';').ToList();
             if (list.Contains(blueprint)) return;
             list.Add(blueprint);
             SessionState.SetString(key, string.Join(";", list));
-            
+
             await VRCApi.ContentUploadConsent(new VRCAgreement
             {
                 AgreementCode = "content.copyright.owned",
