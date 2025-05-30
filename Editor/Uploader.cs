@@ -30,6 +30,30 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private static readonly SemaphoreSlim GlobalSemaphore = new SemaphoreSlim(1, 1);
 
+        private static void CheckForPreconditions(IVRCSdkAvatarBuilderApi builder)
+        {
+            if (EditorApplication.isPlaying) throw new Exception("Playmode"); // TODO
+            switch (builder.UploadState)
+            {
+                case SdkUploadState.Idle:
+                case SdkUploadState.Failure:
+                case SdkUploadState.Success:
+                    break;
+                case SdkUploadState.Uploading:
+                default:
+                    throw new Exception($"Previous Upload is in progress (state: {builder.UploadState}");
+            }
+        }
+
+        public static bool AskForCopyrightAgreement()
+        {
+            if (Application.isBatchMode) return true;
+
+            return EditorUtility.DisplayDialog("Continuous Avatar Uploader: VRCSDK Agreement",
+                AgreementText,
+                "OK", "NO");
+        }
+
         public delegate void StartUpload(AvatarUploadSetting avatr, int index);
 
         public static async Task Upload(
@@ -42,89 +66,32 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             CancellationToken cancellationToken = default
         )
         {
-            if (EditorApplication.isPlaying) throw new Exception("Playmode"); // TODO
-            switch (builder.UploadState)
-            {
-                case SdkUploadState.Idle:
-                case SdkUploadState.Failure:
-                    break;
-                case SdkUploadState.Success:
-                case SdkUploadState.Uploading:
-                default:
-                    throw new Exception("Invalid State");
-            }
+            // assign default actions
+            onException ??= Debug.LogException;
 
-            var gotLock = false;
-            try
-            {
-                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                // Since timeout 0 means will not block the thread.
-                gotLock = GlobalSemaphore.Wait(0);
-                if (!gotLock) throw new Exception("Upload in progress");
+            // pre-upload checks
+            CheckForPreconditions(builder);
+            if (!AskForCopyrightAgreement())
+                throw new Exception("No Agreement");
 
-                await UploadImpl(builder, sleepMilliseconds, uploadingAvatars, onStartUpload, onFinishUpload,
-                    onException, cancellationToken);
-            }
-            finally
-            {
-                if (gotLock)
-                {
-                    GlobalSemaphore.Release();
-                }
-            }
-        }
+            using var semaphoreScope = new NoWaitSemaphoreScope(GlobalSemaphore);
+            if (!semaphoreScope.Acquired) throw new Exception("Another CAU Upload in progress");
 
-        private static async Task UploadImpl(
-            IVRCSdkAvatarBuilderApi builder,
-            int sleepMilliseconds,
-            AvatarUploadSetting[] uploadingAvatars,
-            StartUpload onStartUpload,
-            Action<AvatarUploadSetting> onFinishUpload,
-            Action<Exception, AvatarUploadSetting> onException,
-            CancellationToken cancellationToken
-        )
-        {
-            if (onException == null) onException = Debug.LogException;
-
-            if (!Application.isBatchMode)
-
-            {
-                if (!EditorUtility.DisplayDialog("Continuous Avatar Uploader: VRCSDK Agreement",
-                        AgreementText,
-                        "OK", "NO"))
-                    throw new Exception("No Agreement");
-            }
-
-            AssetDatabase.SaveAssets();
-            using (var playmodeScope = new PreventEnteringPlayModeScope())
             using (new OpeningSceneRestoreScope())
             {
                 for (var index = 0; index < uploadingAvatars.Length; index++)
                 {
                     var avatar = uploadingAvatars[index];
-                    Debug.Log($"Upload started for {avatar.name}");
-
-                    if (!avatar.GetCurrentPlatformInfo().enabled)
-                    {
-                        Debug.Log($"Uploading avatar for {avatar.name} is disabled for current platform");
-                        continue;
-                    }
 
                     onStartUpload?.Invoke(avatar, index);
-
-                    using (var scope = LoadAvatar(avatar))
+                    try
                     {
-                        try
-                        {
-                            await UploadAvatar(avatar, scope.AvatarDescriptor, playmodeScope, builder,
-                                cancellationToken);
-                        }
-                        catch (Exception e)
-                        {
-                            onException(e, avatar);
-                        }
+                        await UploadSingle(avatar, builder, cancellationToken);
                     }
-
+                    catch (Exception e)
+                    {
+                        onException(e, avatar);
+                    }
                     onFinishUpload?.Invoke(avatar);
 
                     await Task.Delay(sleepMilliseconds, cancellationToken);
@@ -132,6 +99,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             AssetDatabase.DeleteAsset(PrefabScenePath);
+        }
+
+        public static async Task UploadSingle(
+            AvatarUploadSetting avatar,
+            IVRCSdkAvatarBuilderApi builder,
+            CancellationToken cancellationToken = default)
+        {
+            CheckForPreconditions(builder);
+
+            if (!avatar.GetCurrentPlatformInfo().enabled)
+            {
+                Debug.Log($"Uploading avatar for {avatar.name} is disabled for current platform");
+                return;
+            }
+
+            using (var playmodeScope = new PreventEnteringPlayModeScope())
+            {
+                Debug.Log($"Upload started for {avatar.name}");
+
+                using (var scope = LoadAvatar(avatar))
+                {
+                    await UploadAvatar(avatar, scope.AvatarDescriptor, playmodeScope, builder,
+                        cancellationToken);
+                }
+            }
         }
 
         private static async Task UploadAvatar(AvatarUploadSetting avatar,
@@ -612,6 +604,26 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             public void Dispose()
             {
                 EditorApplication.update -= Update;
+            }
+        }
+
+        class NoWaitSemaphoreScope : IDisposable
+        {
+            private readonly SemaphoreSlim _semaphore;
+            private bool _acquired;
+
+            public NoWaitSemaphoreScope(SemaphoreSlim semaphore)
+            {
+                _semaphore = semaphore;
+                _acquired = _semaphore.Wait(0);
+            }
+
+            public bool Acquired => _acquired;
+
+            public void Dispose()
+            {
+                if (_acquired) _semaphore.Release();
+                _acquired = false;
             }
         }
     }

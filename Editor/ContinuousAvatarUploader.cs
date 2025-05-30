@@ -248,6 +248,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 Repaint();
                 var uploadingAvatars = GetUploadingAvatars().ToArray();
                 _totalCount = uploadingAvatars.Length;
+                AssetDatabase.SaveAssets();
                 await Uploader.Upload(builder,
                     sleepMilliseconds: (int)(Preferences.SleepSeconds * 1000),
                     uploadingAvatars: uploadingAvatars,
