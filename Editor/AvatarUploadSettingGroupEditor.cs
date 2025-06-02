@@ -38,6 +38,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var header = new IMGUIContainer(() =>
             {
                 EditorGUILayout.LabelField("Avatar Upload Settings", EditorStyles.boldLabel);
+
+                var hasAvatarWithAllPlatformsDisabled = _asset.avatars.Any(avatar => !avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled);
+                if (hasAvatarWithAllPlatformsDisabled)
+                    EditorGUILayout.HelpBox("Some avatars have all platforms disabled. This is fine if intentional.", MessageType.Warning);
                 
                 if (GUILayout.Button("Upload All"))
                 {

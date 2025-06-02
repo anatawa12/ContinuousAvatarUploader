@@ -130,6 +130,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 SingleAvatarDescriptor(_avatarDescriptor);
             }
 
+            if (!serializedObject.isEditingMultipleObjects)
+            {
+                var avatar = avatars.First();
+                if (!avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled)
+                    EditorGUILayout.HelpBox("This avatar has all platforms disabled. This is fine if intentional.", MessageType.Warning);
+            }
+            
             {
                 var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
                 using (new EditorGUI.DisabledGroupScope(!enabledAll))
