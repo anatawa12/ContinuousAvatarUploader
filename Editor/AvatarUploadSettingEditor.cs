@@ -91,7 +91,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
 
                 EditorGUI.BeginDisabledGroup(descriptor.IsNull());
-                if (GUILayout.Button("Chancel Change Avatar"))
+                if (GUILayout.Button("Cancel Change Avatar"))
                     _settingAvatar = false;
                 EditorGUI.EndDisabledGroup();
             }
