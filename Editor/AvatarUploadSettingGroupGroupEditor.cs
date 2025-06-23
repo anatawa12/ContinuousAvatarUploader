@@ -20,16 +20,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public override void OnInspectorGUI()
         {
             EditorGUILayout.LabelField("Avatar Upload Settings", EditorStyles.boldLabel);
-            if (GUILayout.Button("Upload All"))
-            {
-                var uploader = EditorWindow.GetWindow<ContinuousAvatarUploader>();
-                uploader.settingsOrGroups = new AvatarUploadSettingOrGroup[] { (AvatarUploadSettingGroupGroup)target };
-                if (!uploader.StartUpload())
-                {
-                    EditorUtility.DisplayDialog("Failed to start upload",
-                        "Failed to start upload.\nPlease refer Uploader window for reason", "OK");
-                }
-            }
+            ContinuousAvatarUploader.UploadButtonGui(new [] { (AvatarUploadSettingGroupGroup)target }, Repaint);
             EditorGUILayout.Space();
 
             serializedObject.Update();

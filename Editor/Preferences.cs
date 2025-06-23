@@ -23,5 +23,19 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             get => EditorPrefs.GetBool(EditorPrefsPrefix + "dialog-when-finish", true);
             set => EditorPrefs.SetBool(EditorPrefsPrefix + "dialog-when-finish", value);
         }
+
+        internal static bool UploadFor(TargetPlatform targetPlatform) => 
+            EditorPrefs.GetBool(EditorPrefsPrefix + "upload-for." + targetPlatform, Uploader.GetCurrentTargetPlatform() == targetPlatform);
+
+        internal static void SetUploadFor(TargetPlatform targetPlatform, bool value)
+        {
+            EditorPrefs.SetBool(EditorPrefsPrefix + "upload-for." + targetPlatform, value);
+        }
+
+        public static bool RollbackBuildPlatform
+        {
+            get => EditorPrefs.GetBool(EditorPrefsPrefix + "rollback-build-platform", true);
+            set => EditorPrefs.SetBool(EditorPrefsPrefix + "rollback-build-platform", value);
+        }
     }
 }

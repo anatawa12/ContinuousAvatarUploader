@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog].
 ## [Unreleased]
 ### Added
 - Add warning for avatars with all platforms disabled [`#105`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/105)
+- Support for Multi-platform Avatar Uploads `#106`
+  - You now can upload avatars for multiple platforms at once.
+  - You can select platforms to upload in the uploader window.
+- Resume Uploads after Unity Editor Crash `#106`
+  - If Unity Editor crashes while uploading avatars, the uploader will ask you to resume the uploads in the next upload.
 
 ### Changed
 
@@ -19,6 +24,11 @@ The format is based on [Keep a Changelog].
 ### Fixed
 
 ### Security
+
+### Notes
+- If when you're using git or some other VCS in your avatar project, it's better to add `Assets/com.anatawa12.continuous-avatar-uploader.uploader-progress.asset` to your VCS ignore list.
+  - This file is used to store the upload progress and used to resume uploads after Unity Editor crashes or target platform changes.
+  - Therefore, this file is not intended to be shared with others, and it may cause conflicts if you share it with others.
 
 ## [0.3.7] - 2025-04-06
 ### Fixed

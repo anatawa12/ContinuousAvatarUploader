@@ -24,34 +24,23 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
-        internal bool Uploading => _guiState != State.Configuring;
-
         // for uploading avatars
 
         [NonSerialized] private State _guiState;
         [NonSerialized] private AvatarUploadSetting _currentUploadingAvatar;
-        [SerializeField] private List<UploadErrorInfo> previousUploadErrors = new List<UploadErrorInfo>();
         [SerializeField] private Vector2 uploadsScroll;
         [SerializeField] private Vector2 errorsScroll;
+        [SerializeField] private List<UploadErrorInfo> uploadErrors;
 
-        [Serializable]
-        private struct UploadErrorInfo
-        {
-            public string message;
-            public AvatarUploadSetting uploadingAvatar;
-        }
+        private UploaderProgressAsset progressAsset;
 
         private SerializedObject _serialized;
         private SerializedProperty _settingsOrGroups;
 
-        private CancellationTokenSource _cancellationToken;
-        private IVRCSdkAvatarBuilderApi _builder = null;
-        private int _totalCount;
-        private int _uploadingIndex;
-
         [MenuItem("Window/Continuous Avatar Uploader")]
         [MenuItem("Tools/Continuous Avatar Uploader")]
-        public static void OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
+        private static void OpenWindowItem() => OpenWindow();
+        public static ContinuousAvatarUploader OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
 
         private void OnEnable()
         {
@@ -60,25 +49,84 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _settingsOrGroups.isExpanded = true;
             VRCSdkControlPanel.OnSdkPanelEnable += OnSdkPanelEnableDisable;
             VRCSdkControlPanel.OnSdkPanelDisable += OnSdkPanelEnableDisable;
+            UploadOrchestrator.OnUploadSingleAvatarStarted += OnUploadSingleAvatarStarted;
+            UploadOrchestrator.OnUploadSingleAvatarFinished += OnUploadSingleAvatarFinished;
+            UploadOrchestrator.OnUploadFinished += OnUploadFinished;
+            UploadOrchestrator.OnLoginFailed += OnLoginFailed;
+            UploadOrchestrator.OnRandomException += OnRandomException;
         }
 
         private void OnDisable()
         {
             VRCSdkControlPanel.OnSdkPanelEnable -= OnSdkPanelEnableDisable;
             VRCSdkControlPanel.OnSdkPanelDisable -= OnSdkPanelEnableDisable;
+            UploadOrchestrator.OnUploadSingleAvatarStarted -= OnUploadSingleAvatarStarted;
+            UploadOrchestrator.OnUploadSingleAvatarFinished -= OnUploadSingleAvatarFinished;
+            UploadOrchestrator.OnUploadFinished -= OnUploadFinished;
+            UploadOrchestrator.OnLoginFailed -= OnLoginFailed;
+            UploadOrchestrator.OnRandomException -= OnRandomException;
         }
 
         private void OnSdkPanelEnableDisable(object sender, EventArgs e) => Repaint();
 
+        private void OnUploadSingleAvatarStarted(UploaderProgressAsset progress, AvatarUploadSetting avatar)
+        {
+            _guiState = State.UploadingAvatar;
+            _currentUploadingAvatar = avatar;
+            Repaint();
+        }
+
+        private void OnUploadSingleAvatarFinished(UploaderProgressAsset progress, AvatarUploadSetting avatar)
+        {
+            _guiState = State.UploadedAvatar;
+            _currentUploadingAvatar = null;
+            Repaint();
+        }
+
+        private void OnUploadFinished(UploaderProgressAsset obj, bool successfully)
+        {
+            _guiState = State.Configuring;
+            _currentUploadingAvatar = null;
+            // if finished unsuccessfully, we should have shown error dialog already
+            if (Preferences.ShowDialogWhenUploadFinished && successfully)
+                EditorUtility.DisplayDialog("Continuous Avatar Uploader", "Finished Uploading Avatars!", "OK");
+            Repaint();
+        }
+
+        private void OnLoginFailed(Exception obj)
+        {
+            _guiState = State.Configuring;
+            _currentUploadingAvatar = null;
+            EditorUtility.DisplayDialog("Continuous Avatar Uploader", "Login Failed: " + obj.Message, "OK");
+        }
+
+        private void OnRandomException(Exception obj)
+        {
+            _guiState = State.Configuring;
+            _currentUploadingAvatar = null;
+            EditorUtility.DisplayDialog("Continuous Avatar Uploader", "An error occurred: " + obj.Message, "OK");
+        }
+
         private void OnGUI()
         {
-            var uploadInProgress = _guiState != State.Configuring;
+            var loaded = UploaderProgressAsset.Load();
+            progressAsset = loaded != null ? loaded : progressAsset;
+            progressAsset = progressAsset == null ? null : progressAsset;
+            uploadErrors = progressAsset?.uploadErrors ?? uploadErrors;
+            var uploadInProgress = progressAsset != null;
             if (uploadInProgress)
             {
+                var totalCount = progressAsset.uploadSettings.Length;
+                var uploadingIndex = progressAsset.uploadingAvatarIndex;
+                var totalPlatforms = progressAsset.targetPlatforms.Length;
+                var uploadingTargetCount = progressAsset.uploadFinishedPlatforms.Length;
                 GUILayout.Label("UPLOAD IN PROGRESS");
                 EditorGUI.ProgressBar(GUILayoutUtility.GetRect(100, 20),
-                    (_uploadingIndex + 0.5f) / _totalCount,
-                    $"Uploading {_uploadingIndex + 1} / {_totalCount}");
+                    (uploadingTargetCount + 0.5f) / totalPlatforms,
+                    $"Uploading for {progressAsset.uploadingTargetPlatform} ({uploadingTargetCount + 1} / {totalPlatforms} platforms)");
+                EditorGUI.ProgressBar(GUILayoutUtility.GetRect(100, 20),
+                    (uploadingIndex + 0.5f) / totalCount,
+                    $"Uploading {uploadingIndex + 1} / {totalCount} for {progressAsset.uploadingTargetPlatform}");
                 if (_currentUploadingAvatar)
                 {
                     EditorGUILayout.ObjectField("Uploading", _currentUploadingAvatar, typeof(AvatarUploadSetting), true);
@@ -89,7 +137,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
 
                 if (GUILayout.Button("ABORT UPLOAD"))
-                    _cancellationToken?.Cancel();
+                    UploadOrchestrator.CancelUpload();
             }
 
             EditorGUI.BeginDisabledGroup(uploadInProgress);
@@ -105,6 +153,25 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 new GUIContent("Show Dialog when Finished", 
                     "If this is enabled, CAU will tell you upload finished."),
                 Preferences.ShowDialogWhenUploadFinished);
+            Preferences.RollbackBuildPlatform = EditorGUILayout.ToggleLeft(
+                new GUIContent("Rollback Build Platform", 
+                    "If this is enabled, CAU will rollback the build platform to the one before upload after upload finished."),
+                Preferences.RollbackBuildPlatform);
+
+            EditorGUILayout.LabelField("Target Platforms", EditorStyles.boldLabel);
+            foreach (var platform in Uploader.GetTargetPlatforms())
+            {
+                var isEnabled = Preferences.UploadFor(platform);
+                var supported = Uploader.IsBuildSupportedInstalled(platform);
+                EditorGUI.BeginDisabledGroup(!supported && !isEnabled);
+                isEnabled = EditorGUILayout.ToggleLeft(
+                    new GUIContent($"Upload for {platform}", 
+                        supported ? $"If this is enabled, CAU will upload avatars for {platform} platform."
+                            : $"Build support for {platform} is not installed. "),
+                    isEnabled);
+                EditorGUI.EndDisabledGroup();
+                Preferences.SetUploadFor(platform, isEnabled);
+            }
 
             var checkResult = CheckUpload();
             if ((checkResult & UploadCheckResult.Uploading) != 0)
@@ -127,10 +194,23 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     "To take thumbnail in PlayMode, Please Disable 'Reload Domain' Option in " +
                     "Enter Play Mode Settings in Editor in Project Settings",
                     MessageType.Error);
+            if ((checkResult & UploadCheckResult.UnsupportedPlatformSelected) != 0)
+                EditorGUILayout.HelpBox(
+                    "Some target platforms are selected, but not supported by current build. " +
+                    "Please install the build support for those platforms in Unity Hub, or " +
+                    "uncheck the target platforms in Continuous Avatar Uploader settings.",
+                    MessageType.Error);
+            if ((checkResult & UploadCheckResult.NoPlatformsSelected) != 0)
+                EditorGUILayout.HelpBox(
+                    "No target platforms are selected. " +
+                    "Please select at least one target platform in Continuous Avatar Uploader settings.",
+                    MessageType.Error);
             using (new EditorGUI.DisabledScope(checkResult != UploadCheckResult.Ok))
             {
                 if (GUILayout.Button("Start Upload"))
-                    StartUpload(_builder);
+                {
+                    DoStartUpload();
+                }
             }
 
             uploadsScroll = EditorGUILayout.BeginScrollView(uploadsScroll);
@@ -145,13 +225,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUILayout.Space();
             GUILayout.Label("Errors from Previous Build:", EditorStyles.boldLabel);
             errorsScroll = EditorGUILayout.BeginScrollView(errorsScroll);
-            if (previousUploadErrors.Count == 0) GUILayout.Label("No Errors");
+            if (uploadErrors.Count == 0) GUILayout.Label("No Errors");
             else
             {
-                foreach (var previousUploadError in previousUploadErrors)
+                foreach (var previousUploadError in uploadErrors)
                 {
                     EditorGUILayout.ObjectField("Uploading", previousUploadError.uploadingAvatar,
                         typeof(AvatarUploadSetting), false);
+                    EditorGUILayout.EnumPopup("For", previousUploadError.targetPlatform);
                     EditorGUILayout.TextArea(previousUploadError.message);
                 }
             }
@@ -170,30 +251,42 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             ControlPanelClosed = 1 << 5,
             NoAvatarBuilder = 1 << 6,
             PlayModeSettingsNotGood = 1 << 7,
+            UnsupportedPlatformSelected = 1 << 8,
+            NoPlatformsSelected = 1 << 9,
         }
 
-        private UploadCheckResult CheckUpload()
+        private UploadCheckResult CheckUpload() => CheckUploadStatic(GetUploadingAvatars(), Repaint);
+
+        private static UploadCheckResult CheckUploadStatic(IEnumerable<AvatarUploadSetting> avatars, [CanBeNull] Action repaint = null)
         {
             var result = UploadCheckResult.Ok;
-            if (_guiState != State.Configuring) result |= UploadCheckResult.Uploading;
-            if (settingsOrGroups.Length == 0) result |= UploadCheckResult.NoDescriptors;
-            if (settingsOrGroups.Any(x => !x)) result |= UploadCheckResult.AnyNull;
+            if (UploadOrchestrator.IsUploadInProgress()) result |= UploadCheckResult.Uploading;
             if (EditorApplication.isPlayingOrWillChangePlaymode) result |= UploadCheckResult.PlayMode;
-            if (!VerifyCredentials(Repaint)) result |= UploadCheckResult.NoCredentials;
+            if (!Uploader.VerifyCredentials(repaint)) result |= UploadCheckResult.NoCredentials;
             if (!VRCSdkControlPanel.window) result |= UploadCheckResult.ControlPanelClosed;
-            if (!VRCSdkControlPanel.TryGetBuilder(out _builder)) result |= UploadCheckResult.NoAvatarBuilder;
-            if (!CheckPlaymodeSettings()) result |= UploadCheckResult.PlayModeSettingsNotGood;
+            if (!VRCSdkControlPanel.TryGetBuilder<IVRCSdkAvatarBuilderApi>(out _)) result |= UploadCheckResult.NoAvatarBuilder;
+            if (!CheckPlaymodeSettings(avatars)) result |= UploadCheckResult.PlayModeSettingsNotGood;
+
+            foreach (var platform in Uploader.GetTargetPlatforms())
+            {
+                if (!Uploader.IsBuildSupportedInstalled(platform) && Preferences.UploadFor(platform))
+                    result |= UploadCheckResult.UnsupportedPlatformSelected;
+            }
+
+            if (!Uploader.GetTargetPlatforms().Any(Preferences.UploadFor))
+                result |= UploadCheckResult.NoPlatformsSelected;
+
             return result;
         }
 
         internal bool StartUpload()
         {
             if (CheckUpload() != UploadCheckResult.Ok) return false;
-            StartUpload(_builder);
+            DoStartUpload();
             return true;
         }
 
-        private bool CheckPlaymodeSettings()
+        private static bool CheckPlaymodeSettings(IEnumerable<AvatarUploadSetting> avatars)
         {
             if (Utils.ReloadDomainDisabled())
                 return true;
@@ -201,7 +294,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (Preferences.TakeThumbnailInPlaymodeByDefault)
                 return false;
 
-            foreach (var avatarUploadSetting in GetUploadingAvatars())
+            foreach (var avatarUploadSetting in avatars)
             {
                 var currentInfo = avatarUploadSetting.GetCurrentPlatformInfo();
                 if (currentInfo.updateImage)
@@ -237,60 +330,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 .SelectMany(x => x.Settings)
                 .Where(x => x);
 
-        private async void StartUpload(IVRCSdkAvatarBuilderApi builder)
+        private void DoStartUpload()
         {
-            _cancellationToken = new CancellationTokenSource();
-            previousUploadErrors.Clear();
-
-            try
-            {
-                _guiState = State.PreparingAvatar;
-                Repaint();
-                var uploadingAvatars = GetUploadingAvatars().ToArray();
-                _totalCount = uploadingAvatars.Length;
-                await Uploader.Upload(builder,
-                    sleepMilliseconds: (int)(Preferences.SleepSeconds * 1000),
-                    uploadingAvatars: uploadingAvatars,
-                    onStartUpload: (avatar, index) =>
-                    {
-                        _guiState = State.UploadingAvatar;
-                        _currentUploadingAvatar = avatar;
-                        _uploadingIndex = index;
-                        Repaint();
-                    },
-                    onException: (exception, avatar) =>
-                    {
-                        previousUploadErrors.Add(new UploadErrorInfo
-                        {
-                            uploadingAvatar = avatar,
-                            message = exception.ToString()
-                        });
-                    },
-                    onFinishUpload: avatar =>
-                    {
-                        _guiState = State.UploadedAvatar;
-                        _currentUploadingAvatar = null;
-                        Repaint();
-                    },
-                    cancellationToken: _cancellationToken.Token);
-            }
-            catch (OperationCanceledException c) when (c.CancellationToken == _cancellationToken.Token)
-            {
-                // cancelled
-            }
-            catch (Exception exception)
-            {
-                Debug.LogException(exception);
-                previousUploadErrors.Add(new UploadErrorInfo { message = exception.ToString() });
-            }
-            finally
-            {
-                _guiState = State.Configuring;
-                Repaint();
-            }
-
-            if (Preferences.ShowDialogWhenUploadFinished)
-                EditorUtility.DisplayDialog("Continuous Avatar Uploader", "Finished Uploading Avatars!", "OK");
+            var progress = ScriptableObject.CreateInstance<UploaderProgressAsset>();
+            progress.openedScenes = UploadOrchestrator.GetLastOpenedScenes();
+            progress.uploadSettings = GetUploadingAvatars().ToArray();
+            progress.targetPlatforms = Uploader.GetTargetPlatforms().Where(Preferences.UploadFor).ToArray();
+            progress.sleepMilliseconds = (int)(Preferences.SleepSeconds * 1000);
+            progress.rollbackPlatform = Preferences.RollbackBuildPlatform;
+            UploadOrchestrator.StartUpload(progress);
         }
 
         enum State
@@ -298,29 +346,77 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             Configuring,
 
             // upload avatar process
-            PreparingAvatar,
             UploadingAvatar,
             UploadedAvatar,
         }
 
-        public static bool VerifyCredentials(Action onSuccess = null)
+        static class UploadButtonGuiStyles
         {
-            if (!ConfigManager.RemoteConfig.IsInitialized())
+            public static GUIContent label = new("Upload This Avatar",
+                "Upload this avatar to the current target platform. " +
+                "If you want to upload multiple avatars, use the Continuous Avatar Uploader window.");
+        }
+
+        public static void UploadButtonGui(IEnumerable<AvatarUploadSettingOrGroup> avatarOrGroups, [CanBeNull] Action repaint = null)
+        {
+            var avatars = avatarOrGroups
+                .Where(x => x)
+                .SelectMany(x => x.Settings)
+                .Where(x => x)
+                .ToArray();
+            var check = CheckUploadStatic(avatars, repaint);
+
+            // target platform selector
+            var flags = FlagsForCurrentBuildPlatforms();
+            EditorGUI.BeginChangeCheck();
+            flags = (TargetPlatformFlags)EditorGUILayout.EnumFlagsField("Target Platforms", flags);
+            if (EditorGUI.EndChangeCheck()) SetBuildPlatforms(flags);
+
+            EditorGUI.BeginDisabledGroup(check != UploadCheckResult.Ok);
+            var guiContent = UploadButtonGuiStyles.label;
+            guiContent.text = avatars.Length == 1 ? "Upload This Avatar" : $"Upload {avatars.Length} Avatars";
+            guiContent.tooltip = check == UploadCheckResult.Ok ? "" : "Cannot upload avatars now. Check the Continuous Avatar Uploader window for details.";
+            if (GUILayout.Button(guiContent))
             {
-#if CAU_VRCSDK_BASE_3_6_0
-                API.SetOnlineMode(true);
-#else
-                API.SetOnlineMode(true, "vrchat");
-#endif
-                ConfigManager.RemoteConfig.Init();
-            }
-            if (!APIUser.IsLoggedIn && ApiCredentials.Load())
-                APIUser.InitialFetchCurrentUser(c =>
+                var uploader = OpenWindow();
+                uploader.settingsOrGroups = avatars.ToArray<AvatarUploadSettingOrGroup>();
+                if (!uploader.StartUpload())
                 {
-                    AnalyticsSDK.LoggedInUserChanged(c.Model as APIUser);
-                    onSuccess?.Invoke();
-                }, null);
-            return APIUser.IsLoggedIn;
+                    EditorUtility.DisplayDialog("Failed to start upload",
+                        "Failed to start upload.\nPlease refer Uploader window for reason", "OK");
+                }
+            }
+            EditorGUI.EndDisabledGroup();
+        }
+
+        private static TargetPlatformFlags FlagsForCurrentBuildPlatforms()
+        {
+            TargetPlatformFlags flags = 0;
+            foreach (var platform in Uploader.GetTargetPlatforms())
+            {
+                if (Preferences.UploadFor(platform))
+                {
+                    flags |= (TargetPlatformFlags)(1 << (int)platform);
+                }
+            }
+            return flags;
+        }
+
+        private static void SetBuildPlatforms(TargetPlatformFlags flags)
+        {
+            foreach (var platform in Uploader.GetTargetPlatforms())
+            {
+                var flag = (TargetPlatformFlags)(1 << (int)platform);
+                Preferences.SetUploadFor(platform, (flags & flag) != 0);
+            }
+        }
+
+        [Flags]
+        enum TargetPlatformFlags
+        {
+            Windows = 1 << (int)TargetPlatform.Windows,
+            Android = 1 << (int)TargetPlatform.Android,
+            iOS = 1 << (int)TargetPlatform.iOS,
         }
     }
 }

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -30,6 +31,121 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private static readonly SemaphoreSlim GlobalSemaphore = new SemaphoreSlim(1, 1);
 
+        private static void CheckForPreconditions(IVRCSdkAvatarBuilderApi builder)
+        {
+            if (EditorApplication.isPlaying) throw new Exception("Playmode"); // TODO
+            switch (builder.UploadState)
+            {
+                case SdkUploadState.Idle:
+                case SdkUploadState.Failure:
+                case SdkUploadState.Success:
+                    break;
+                case SdkUploadState.Uploading:
+                default:
+                    throw new Exception($"Previous Upload is in progress (state: {builder.UploadState}");
+            }
+        }
+
+        public static bool AskForCopyrightAgreement()
+        {
+            if (Application.isBatchMode) return true;
+
+            return EditorUtility.DisplayDialog("Continuous Avatar Uploader: VRCSDK Agreement",
+                AgreementText,
+                "OK", "NO");
+        }
+
+        public static IEnumerable<TargetPlatform> GetTargetPlatforms()
+        {
+            for (var platform = TargetPlatform.Windows; platform < TargetPlatform.LastIndex; platform++)
+                yield return platform;
+        }
+
+        public static TargetPlatform GetCurrentTargetPlatform() =>
+            EditorUserBuildSettings.selectedBuildTargetGroup switch
+            {
+                BuildTargetGroup.Standalone => TargetPlatform.Windows,
+                BuildTargetGroup.Android => TargetPlatform.Android,
+                BuildTargetGroup.iOS => TargetPlatform.iOS,
+                _ => TargetPlatform.LastIndex,
+            };
+
+        private static BuildTarget GetBuildTarget(TargetPlatform platform) => platform switch
+        {
+            TargetPlatform.Windows => BuildTarget.StandaloneWindows64,
+            TargetPlatform.Android => BuildTarget.Android,
+            TargetPlatform.iOS => BuildTarget.iOS,
+            _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
+        };
+
+        private static BuildTargetGroup GetBuildTargetGroup(TargetPlatform platform) => platform switch
+        {
+            TargetPlatform.Windows => BuildTargetGroup.Standalone,
+            TargetPlatform.Android => BuildTargetGroup.Android,
+            TargetPlatform.iOS => BuildTargetGroup.iOS,
+            _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
+        };
+
+        public static async Task<bool> TryLogin()
+        {
+            if (!ConfigManager.RemoteConfig.IsInitialized())
+            {
+#if CAU_VRCSDK_BASE_3_6_0
+                API.SetOnlineMode(true);
+#else
+                API.SetOnlineMode(true, "vrchat");
+#endif
+                ConfigManager.RemoteConfig.Init();
+            }
+            if (!APIUser.IsLoggedIn && ApiCredentials.Load())
+            {
+                var task = new TaskCompletionSource<bool>();
+                APIUser.InitialFetchCurrentUser(c =>
+                {
+                    AnalyticsSDK.LoggedInUserChanged(c.Model as APIUser);
+                    task.TrySetResult(true);
+                }, e =>
+                {
+                    task.TrySetException(new Exception(e.Error));   
+                });
+                await task.Task;
+            }
+            return APIUser.IsLoggedIn;
+        }
+
+        public static bool VerifyCredentials([CanBeNull] Action onUpdate = null)
+        {
+            var task = TryLogin();
+            if (task.IsCompleted) return true;
+            task.ContinueWith(_ => onUpdate, TaskScheduler.FromCurrentSynchronizationContext());
+            return false;
+        }
+
+        public static bool StartSwitchTargetPlatformAsync(TargetPlatform platform) => 
+            EditorUserBuildSettings.SwitchActiveBuildTargetAsync(GetBuildTargetGroup(platform), GetBuildTarget(platform));
+
+        [CanBeNull] private static Func<BuildTarget, bool> _isPlatformSupportLoadedByBuildTargetMethod = null;
+
+        public static bool IsBuildSupportedInstalled(TargetPlatform platform)
+        {
+            if (_isPlatformSupportLoadedByBuildTargetMethod == null)
+            {
+                var moduleManagerType =
+                    typeof(UnityEditor.Editor).Assembly.GetType("UnityEditor.Modules.ModuleManager");
+                var isPlatformSupportLoadedByBuildTargetMethod =
+                    moduleManagerType.GetMethod("IsPlatformSupportLoadedByBuildTarget",
+                        BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic, null,
+                        new[] { typeof(BuildTarget) }, null);
+                if (isPlatformSupportLoadedByBuildTargetMethod == null)
+                    throw new Exception("IsPlatformSupportLoadedByBuildTargetMethod not found");
+                _isPlatformSupportLoadedByBuildTargetMethod =
+                    (Func<BuildTarget, bool>)Delegate.CreateDelegate(typeof(Func<BuildTarget, bool>),
+                        isPlatformSupportLoadedByBuildTargetMethod);
+            }
+
+            return _isPlatformSupportLoadedByBuildTargetMethod(GetBuildTarget(platform));
+        }
+
         public delegate void StartUpload(AvatarUploadSetting avatr, int index);
 
         public static async Task Upload(
@@ -42,87 +158,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             CancellationToken cancellationToken = default
         )
         {
-            if (EditorApplication.isPlaying) throw new Exception("Playmode"); // TODO
-            switch (builder.UploadState)
-            {
-                case SdkUploadState.Idle:
-                case SdkUploadState.Failure:
-                    break;
-                case SdkUploadState.Success:
-                case SdkUploadState.Uploading:
-                default:
-                    throw new Exception("Invalid State");
-            }
+            // assign default actions
+            onException ??= Debug.LogException;
 
-            var gotLock = false;
-            try
-            {
-                // ReSharper disable once MethodHasAsyncOverloadWithCancellation
-                // Since timeout 0 means will not block the thread.
-                gotLock = GlobalSemaphore.Wait(0);
-                if (!gotLock) throw new Exception("Upload in progress");
+            // pre-upload checks
+            CheckForPreconditions(builder);
+            if (!AskForCopyrightAgreement())
+                throw new Exception("No Agreement");
 
-                await UploadImpl(builder, sleepMilliseconds, uploadingAvatars, onStartUpload, onFinishUpload,
-                    onException, cancellationToken);
-            }
-            finally
-            {
-                if (gotLock)
-                {
-                    GlobalSemaphore.Release();
-                }
-            }
-        }
+            using var semaphoreScope = new NoWaitSemaphoreScope(GlobalSemaphore);
+            if (!semaphoreScope.Acquired) throw new Exception("Another CAU Upload in progress");
 
-        private static async Task UploadImpl(
-            IVRCSdkAvatarBuilderApi builder,
-            int sleepMilliseconds,
-            AvatarUploadSetting[] uploadingAvatars,
-            StartUpload onStartUpload,
-            Action<AvatarUploadSetting> onFinishUpload,
-            Action<Exception, AvatarUploadSetting> onException,
-            CancellationToken cancellationToken
-        )
-        {
-            if (onException == null) onException = Debug.LogException;
-
-            if (!Application.isBatchMode)
-
-            {
-                if (!EditorUtility.DisplayDialog("Continuous Avatar Uploader: VRCSDK Agreement",
-                        AgreementText,
-                        "OK", "NO"))
-                    throw new Exception("No Agreement");
-            }
-
-            AssetDatabase.SaveAssets();
-            using (var playmodeScope = new PreventEnteringPlayModeScope())
             using (new OpeningSceneRestoreScope())
             {
                 for (var index = 0; index < uploadingAvatars.Length; index++)
                 {
                     var avatar = uploadingAvatars[index];
-                    Debug.Log($"Upload started for {avatar.name}");
-
-                    if (!avatar.GetCurrentPlatformInfo().enabled)
-                    {
-                        Debug.Log($"Uploading avatar for {avatar.name} is disabled for current platform");
-                        continue;
-                    }
 
                     onStartUpload?.Invoke(avatar, index);
-
-                    using (var scope = LoadAvatar(avatar))
+                    try
                     {
-                        try
-                        {
-                            await UploadAvatar(avatar, scope.AvatarDescriptor, playmodeScope, builder,
-                                cancellationToken);
-                        }
-                        catch (Exception e)
-                        {
-                            onException(e, avatar);
-                        }
+                        await UploadSingle(avatar, builder, cancellationToken);
+                    }
+                    catch (Exception e)
+                    {
+                        onException(e, avatar);
                     }
 
                     onFinishUpload?.Invoke(avatar);
@@ -132,6 +192,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             AssetDatabase.DeleteAsset(PrefabScenePath);
+        }
+
+        public static async Task UploadSingle(
+            AvatarUploadSetting avatar,
+            IVRCSdkAvatarBuilderApi builder,
+            CancellationToken cancellationToken = default)
+        {
+            CheckForPreconditions(builder);
+
+            if (!avatar.GetCurrentPlatformInfo().enabled)
+            {
+                Debug.Log($"Uploading avatar for {avatar.name} is disabled for current platform");
+                return;
+            }
+
+            using (var playmodeScope = new PreventEnteringPlayModeScope())
+            {
+                Debug.Log($"Upload started for {avatar.name}");
+
+                using (var scope = LoadAvatar(avatar))
+                {
+                    await UploadAvatar(avatar, scope.AvatarDescriptor, playmodeScope, builder,
+                        cancellationToken);
+                }
+            }
         }
 
         private static async Task UploadAvatar(AvatarUploadSetting avatar,
@@ -201,6 +286,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         {
                             await Utils.ExitPlayMode();
                         }
+
                         if (!avatarDescriptor) avatarDescriptor = ResolveAvatar("exited play mode");
                     }
 
@@ -386,7 +472,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (AvatarDescriptor != null)
                 {
                     var index = 0;
-                    for (var transform = AvatarDescriptor.transform; transform != null; transform = transform.parent, index++)
+                    for (var transform = AvatarDescriptor.transform;
+                         transform != null;
+                         transform = transform.parent, index++)
                     {
                         transform.gameObject.SetActive(_oldActive[index]);
                     }
@@ -396,7 +484,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private static IUploadAvatarScope LoadAvatar(AvatarUploadSetting avatar) =>
             avatar.avatarDescriptor.IsAssetReference()
-                ? (IUploadAvatarScope) new AssetUploadAvatarScope(avatar)
+                ? (IUploadAvatarScope)new AssetUploadAvatarScope(avatar)
                 : new InSceneAvatarScope(avatar);
 
         private static PipelineManager PreparePipelineManager(GameObject gameObject)
@@ -563,11 +651,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             const string key = "VRCSdkControlPanel.CopyrightAgreement.ContentList";
             var keyText = SessionState.GetString(key, "");
-            var list = string.IsNullOrEmpty(keyText) ? new List<string>() : SessionState.GetString(key, "").Split(';').ToList();
+            var list = string.IsNullOrEmpty(keyText)
+                ? new List<string>()
+                : SessionState.GetString(key, "").Split(';').ToList();
             if (list.Contains(blueprint)) return;
             list.Add(blueprint);
             SessionState.SetString(key, string.Join(";", list));
-            
+
             await VRCApi.ContentUploadConsent(new VRCAgreement
             {
                 AgreementCode = "content.copyright.owned",
@@ -612,6 +702,26 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             public void Dispose()
             {
                 EditorApplication.update -= Update;
+            }
+        }
+
+        class NoWaitSemaphoreScope : IDisposable
+        {
+            private readonly SemaphoreSlim _semaphore;
+            private bool _acquired;
+
+            public NoWaitSemaphoreScope(SemaphoreSlim semaphore)
+            {
+                _semaphore = semaphore;
+                _acquired = _semaphore.Wait(0);
+            }
+
+            public bool Acquired => _acquired;
+
+            public void Dispose()
+            {
+                if (_acquired) _semaphore.Release();
+                _acquired = false;
             }
         }
     }

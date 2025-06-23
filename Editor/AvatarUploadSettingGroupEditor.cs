@@ -43,16 +43,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (hasAvatarWithAllPlatformsDisabled)
                     EditorGUILayout.HelpBox("Some avatars have all platforms disabled. This is fine if intentional.", MessageType.Warning);
                 
-                if (GUILayout.Button("Upload All"))
-                {
-                    var uploader = EditorWindow.GetWindow<ContinuousAvatarUploader>();
-                    uploader.settingsOrGroups = new AvatarUploadSettingOrGroup[] { _asset };
-                    if (!uploader.StartUpload())
-                    {
-                        EditorUtility.DisplayDialog("Failed to start upload",
-                            "Failed to start upload.\nPlease refer Uploader window for reason", "OK");
-                    }
-                }
+                ContinuousAvatarUploader.UploadButtonGui(new[] { _asset }, Repaint);
 
                 EditorGUILayout.Space();
             });

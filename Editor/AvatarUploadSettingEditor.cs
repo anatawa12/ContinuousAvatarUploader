@@ -140,8 +140,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
                 using (new EditorGUI.DisabledGroupScope(!enabledAll))
-                    if (GUILayout.Button("Upload This Avatar"))
-                        UploadThis(avatars);
+                    ContinuousAvatarUploader.UploadButtonGui(avatars, Repaint);
             }
 
             DrawPlatformSpecificInfo(Labels.PCWindows, _windows);
@@ -188,17 +187,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar) 
             {
                 _previewCameraManager.RemoveEditor(this);
-            }
-        }
-
-        private static void UploadThis(AvatarUploadSetting[] avatars)
-        {
-            var uploader = EditorWindow.GetWindow<ContinuousAvatarUploader>();
-            uploader.settingsOrGroups = avatars.ToArray<AvatarUploadSettingOrGroup>();
-            if (!uploader.StartUpload())
-            {
-                EditorUtility.DisplayDialog("Failed to start upload",
-                    "Failed to start upload.\nPlease refer Uploader window for reason", "OK");
             }
         }
 
