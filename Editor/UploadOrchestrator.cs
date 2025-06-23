@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VRC.SDK3A.Editor;
+using VRC.SDKBase.Editor;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
@@ -18,7 +20,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public static event Action<UploaderProgressAsset, AvatarUploadSetting> OnUploadSingleAvatarStarted;
         public static event Action<UploaderProgressAsset, AvatarUploadSetting> OnUploadSingleAvatarFinished;
-        public static event Action<UploaderProgressAsset, AvatarUploadSetting, Exception> OnUploadSingleAvatarFailed;
+        public static event Action<UploaderProgressAsset, AvatarUploadSetting, List<Exception>> OnUploadSingleAvatarFailed;
         public static event Action<UploaderProgressAsset, bool> OnUploadFinished;
         public static event Action<Exception> OnLoginFailed;
         public static event Action<Exception> OnRandomException;
@@ -191,22 +193,39 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 WithTryCatch(() => OnUploadSingleAvatarStarted?.Invoke(asset, avatarToUpload));
 
-                try
+                var trialIndex = 0;
+                var errorsInThisTrial = new List<Exception>();
+                do
                 {
-                    await Uploader.UploadSingle(avatarToUpload, builder, CancellationToken);
-                }
-                catch (Exception exception)
-                {
-                    Debug.LogException(exception);
-                    asset.uploadErrors.Add(new UploadErrorInfo
+                    try
                     {
-                        uploadingAvatar = avatarToUpload,
-                        targetPlatform = Uploader.GetCurrentTargetPlatform(),
-                        message = exception.ToString()
-                    });
-                    asset.Save();
-                    WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, exception));
-                }
+                        await Uploader.UploadSingle(avatarToUpload, builder, CancellationToken);
+                        break;
+                    }
+                    catch (Exception exception)
+                    {
+                        Debug.LogException(exception);
+                        errorsInThisTrial.Add(exception);
+
+                        trialIndex++;
+
+                        if (trialIndex > asset.retryCount || IsUnRetryableException(exception))
+                        {
+                            foreach (var exception1 in errorsInThisTrial)
+                            {
+                                asset.uploadErrors.Add(new UploadErrorInfo
+                                {
+                                    uploadingAvatar = avatarToUpload,
+                                    targetPlatform = asset.uploadingTargetPlatform,
+                                    message = exception1.ToString()
+                                });
+                            }
+                            asset.Save();
+                            WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, errorsInThisTrial));
+                            break;
+                        }
+                    }
+                } while (true);
 
                 Log($"Avatar {asset.uploadingAvatarIndex + 1}/{asset.uploadSettings.Length} uploaded for platform {asset.uploadingTargetPlatform}.");
 
@@ -233,6 +252,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // Continue uploading the next avatar.
             await UploadNextAvatar(asset);
         }
+
+        private static bool IsUnRetryableException(Exception exception) => exception is OwnershipException or BuilderException;
 
         private static bool TrySelectNextPlatform(UploaderProgressAsset asset)
         {

@@ -37,5 +37,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             get => EditorPrefs.GetBool(EditorPrefsPrefix + "rollback-build-platform", true);
             set => EditorPrefs.SetBool(EditorPrefsPrefix + "rollback-build-platform", value);
         }
+
+        public static int RetryCount
+        {
+            get => EditorPrefs.GetInt(EditorPrefsPrefix + "retry-count", 1);
+            set => EditorPrefs.SetInt(EditorPrefsPrefix + "retry-count", value);
+        }
     }
 }

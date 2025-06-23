@@ -36,6 +36,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public bool rollbackPlatform;
         public BuildTarget lastBuildPlatform;
         public BuildTargetGroup lastBuildPlatformGroup;
+        /// <summary>
+        /// The number of retries to attempt for each upload.
+        /// Zero means no retries, so only one attempt will be made.
+        /// </summary>
+        // Note: for simplicity in the implementation, we only preserve the retry count in the local variable,
+        // not on the asset so restarting the editor while uploading a avatar will reset the retry count.
+        public int retryCount;
 
         // Mutable fields that describe the current progress of the upload
         /// <summary>
