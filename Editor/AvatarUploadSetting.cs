@@ -34,16 +34,23 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             versionNamePrefix = "v"
         };
 
-        public PlatformSpecificInfo GetCurrentPlatformInfo() =>
-            EditorUserBuildSettings.selectedBuildTargetGroup switch
+        internal PlatformSpecificInfo GetPlatformInfo(TargetPlatform targetPlatform) =>
+            targetPlatform switch
             {
-                BuildTargetGroup.Standalone => windows,
-                BuildTargetGroup.Android => quest,
-                BuildTargetGroup.iOS => ios,
-                _ => throw new ArgumentOutOfRangeException()
+                TargetPlatform.Windows => windows,
+                TargetPlatform.Android => quest,
+                TargetPlatform.iOS => ios,
+                _ => throw new ArgumentOutOfRangeException(nameof(targetPlatform), targetPlatform, null)
             };
 
+        public PlatformSpecificInfo GetCurrentPlatformInfo() => GetPlatformInfo(Uploader.GetCurrentTargetPlatform());
+
         internal override AvatarUploadSetting[] Settings => new[] { this };
+
+        private void Reset()
+        {
+            GetCurrentPlatformInfo().enabled = true;
+        }
     }
 
     [Serializable]

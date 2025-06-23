@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog].
   - If Unity Editor crashes while uploading avatars, the uploader will ask you to resume the uploads in the next upload.
 
 ### Changed
+- Current build platform is now selected by default on creating new AvatarUploadSetting `#110`
+  - You still can change the platform in the inspector, and change multiple settings at once by selecting multiple AvatarUploadSettings (multi-editing).
 
 ### Deprecated
 
