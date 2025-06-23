@@ -38,7 +38,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         [MenuItem("Window/Continuous Avatar Uploader")]
         [MenuItem("Tools/Continuous Avatar Uploader")]
-        public static void OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
+        private static void OpenWindowItem() => OpenWindow();
+        public static ContinuousAvatarUploader OpenWindow() => GetWindow<ContinuousAvatarUploader>("ContinuousAvatarUploader");
 
         private void OnEnable()
         {
@@ -145,6 +146,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     "If this is enabled, CAU will tell you upload finished."),
                 Preferences.ShowDialogWhenUploadFinished);
 
+            EditorGUILayout.LabelField("Target Platforms", EditorStyles.boldLabel);
             foreach (var platform in Uploader.GetTargetPlatforms())
             {
                 var isEnabled = Preferences.UploadFor(platform);
@@ -333,6 +335,75 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // upload avatar process
             UploadingAvatar,
             UploadedAvatar,
+        }
+
+        static class UploadButtonGuiStyles
+        {
+            public static GUIContent label = new("Upload This Avatar",
+                "Upload this avatar to the current target platform. " +
+                "If you want to upload multiple avatars, use the Continuous Avatar Uploader window.");
+        }
+
+        public static void UploadButtonGui(IEnumerable<AvatarUploadSettingOrGroup> avatarOrGroups, [CanBeNull] Action repaint = null)
+        {
+            var avatars = avatarOrGroups
+                .Where(x => x)
+                .SelectMany(x => x.Settings)
+                .Where(x => x)
+                .ToArray();
+            var check = CheckUploadStatic(avatars, repaint);
+
+            // target platform selector
+            var flags = FlagsForCurrentBuildPlatforms();
+            EditorGUI.BeginChangeCheck();
+            flags = (TargetPlatformFlags)EditorGUILayout.EnumFlagsField("Target Platforms", flags);
+            if (EditorGUI.EndChangeCheck()) SetBuildPlatforms(flags);
+
+            EditorGUI.BeginDisabledGroup(check != UploadCheckResult.Ok);
+            var guiContent = UploadButtonGuiStyles.label;
+            guiContent.text = avatars.Length == 1 ? "Upload This Avatar" : $"Upload {avatars.Length} Avatars";
+            guiContent.tooltip = check == UploadCheckResult.Ok ? "" : "Cannot upload avatars now. Check the Continuous Avatar Uploader window for details.";
+            if (GUILayout.Button(guiContent))
+            {
+                var uploader = OpenWindow();
+                uploader.settingsOrGroups = avatars.ToArray<AvatarUploadSettingOrGroup>();
+                if (!uploader.StartUpload())
+                {
+                    EditorUtility.DisplayDialog("Failed to start upload",
+                        "Failed to start upload.\nPlease refer Uploader window for reason", "OK");
+                }
+            }
+            EditorGUI.EndDisabledGroup();
+        }
+
+        private static TargetPlatformFlags FlagsForCurrentBuildPlatforms()
+        {
+            TargetPlatformFlags flags = 0;
+            foreach (var platform in Uploader.GetTargetPlatforms())
+            {
+                if (Preferences.UploadFor(platform))
+                {
+                    flags |= (TargetPlatformFlags)(1 << (int)platform);
+                }
+            }
+            return flags;
+        }
+
+        private static void SetBuildPlatforms(TargetPlatformFlags flags)
+        {
+            foreach (var platform in Uploader.GetTargetPlatforms())
+            {
+                var flag = (TargetPlatformFlags)(1 << (int)platform);
+                Preferences.SetUploadFor(platform, (flags & flag) != 0);
+            }
+        }
+
+        [Flags]
+        enum TargetPlatformFlags
+        {
+            Windows = 1 << (int)TargetPlatform.Windows,
+            Android = 1 << (int)TargetPlatform.Android,
+            iOS = 1 << (int)TargetPlatform.iOS,
         }
     }
 }
