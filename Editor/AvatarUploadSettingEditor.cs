@@ -91,7 +91,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
 
                 EditorGUI.BeginDisabledGroup(descriptor.IsNull());
-                if (GUILayout.Button("Chancel Change Avatar"))
+                if (GUILayout.Button("Cancel Change Avatar"))
                     _settingAvatar = false;
                 EditorGUI.EndDisabledGroup();
             }
@@ -130,6 +130,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 SingleAvatarDescriptor(_avatarDescriptor);
             }
 
+            if (!serializedObject.isEditingMultipleObjects)
+            {
+                var avatar = avatars.First();
+                if (!avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled)
+                    EditorGUILayout.HelpBox("This avatar has all platforms disabled. This is fine if intentional.", MessageType.Warning);
+            }
+            
             {
                 var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
                 using (new EditorGUI.DisabledGroupScope(!enabledAll))

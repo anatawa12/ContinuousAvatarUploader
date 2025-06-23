@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- Add warning for avatars with all platforms disabled [`#105`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/105)
 - Support for Multi-platform Avatar Uploads `#106`
   - You now can upload avatars for multiple platforms at once.
   - You can select platforms to upload in the uploader window.
