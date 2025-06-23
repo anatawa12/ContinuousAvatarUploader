@@ -26,6 +26,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         /// The list of target platforms that the user has requested to upload.
         /// </summary>
         public TargetPlatform[] targetPlatforms = Array.Empty<TargetPlatform>();
+        /// <summary>
+        /// The number of milliseconds to wait between each upload attempt.
+        /// </summary>
+        public int sleepMilliseconds;
 
         // Mutable fields that describe the current progress of the upload
         /// <summary>
@@ -58,8 +62,27 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public void Save()
         {
-            AssetDatabase.CreateAsset(this, AssetPath);
-            AssetDatabase.SaveAssets();
+            if (!string.IsNullOrEmpty(AssetDatabase.GetAssetPath(this)))
+            {
+                EditorUtility.SetDirty(this);
+                AssetDatabase.SaveAssetIfDirty(this);
+            }
+            else if (System.IO.File.Exists(AssetPath))
+            {
+                throw new Exception($"{AssetPath} already exists");
+            }
+            else
+            {
+                AssetDatabase.CreateAsset(this, AssetPath);
+            }
+        }
+
+        public void Delete()
+        {
+            if (AssetDatabase.LoadAssetAtPath<UploaderProgressAsset>(AssetPath) == this)
+            {
+                AssetDatabase.DeleteAsset(AssetPath);
+            }
         }
     }
     
