@@ -80,6 +80,41 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
         };
 
+        public static async Task<bool> TryLogin()
+        {
+            if (!ConfigManager.RemoteConfig.IsInitialized())
+            {
+#if CAU_VRCSDK_BASE_3_6_0
+                API.SetOnlineMode(true);
+#else
+                API.SetOnlineMode(true, "vrchat");
+#endif
+                ConfigManager.RemoteConfig.Init();
+            }
+            if (!APIUser.IsLoggedIn && ApiCredentials.Load())
+            {
+                var task = new TaskCompletionSource<bool>();
+                APIUser.InitialFetchCurrentUser(c =>
+                {
+                    AnalyticsSDK.LoggedInUserChanged(c.Model as APIUser);
+                    task.TrySetResult(true);
+                }, e =>
+                {
+                    task.TrySetException(new Exception(e.Error));   
+                });
+                await task.Task;
+            }
+            return APIUser.IsLoggedIn;
+        }
+
+        public static bool VerifyCredentials([CanBeNull] Action onUpdate = null)
+        {
+            var task = TryLogin();
+            if (task.IsCompleted) return true;
+            task.ContinueWith(_ => onUpdate, TaskScheduler.FromCurrentSynchronizationContext());
+            return false;
+        }
+
         public static void StartSwitchTargetPlatform(TargetPlatform platform) => 
             EditorUserBuildSettings.SwitchActiveBuildTarget(GetBuildTargetGroup(platform), GetBuildTarget(platform));
 

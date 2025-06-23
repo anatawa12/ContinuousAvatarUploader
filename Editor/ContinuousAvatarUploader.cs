@@ -173,7 +173,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (settingsOrGroups.Length == 0) result |= UploadCheckResult.NoDescriptors;
             if (settingsOrGroups.Any(x => !x)) result |= UploadCheckResult.AnyNull;
             if (EditorApplication.isPlayingOrWillChangePlaymode) result |= UploadCheckResult.PlayMode;
-            if (!VerifyCredentials(Repaint)) result |= UploadCheckResult.NoCredentials;
+            if (!Uploader.VerifyCredentials(Repaint)) result |= UploadCheckResult.NoCredentials;
             if (!VRCSdkControlPanel.window) result |= UploadCheckResult.ControlPanelClosed;
             if (!VRCSdkControlPanel.TryGetBuilder(out _builder)) result |= UploadCheckResult.NoAvatarBuilder;
             if (!CheckPlaymodeSettings()) result |= UploadCheckResult.PlayModeSettingsNotGood;
@@ -297,26 +297,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             PreparingAvatar,
             UploadingAvatar,
             UploadedAvatar,
-        }
-
-        public static bool VerifyCredentials(Action onSuccess = null)
-        {
-            if (!ConfigManager.RemoteConfig.IsInitialized())
-            {
-#if CAU_VRCSDK_BASE_3_6_0
-                API.SetOnlineMode(true);
-#else
-                API.SetOnlineMode(true, "vrchat");
-#endif
-                ConfigManager.RemoteConfig.Init();
-            }
-            if (!APIUser.IsLoggedIn && ApiCredentials.Load())
-                APIUser.InitialFetchCurrentUser(c =>
-                {
-                    AnalyticsSDK.LoggedInUserChanged(c.Model as APIUser);
-                    onSuccess?.Invoke();
-                }, null);
-            return APIUser.IsLoggedIn;
         }
     }
 }
