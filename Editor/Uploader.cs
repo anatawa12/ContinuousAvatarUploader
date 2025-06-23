@@ -643,9 +643,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
+#if CAU_VRCSDK_BASE_3_8_1
+        public static string AgreementText = VRCCopyrightAgreement.AgreementText;
+#else
         public static string AgreementText =
             "By clicking OK, I certify that I have the necessary rights to upload this content and that it will not infringe on any third-party legal or intellectual property rights.";
-
+#endif
 #if CAU_VRCSDK_BASE_3_8_0
         private static async Task AddCopyrightAgreement(string blueprint)
         {

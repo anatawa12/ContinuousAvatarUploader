@@ -31,6 +31,11 @@
             "name": "com.vrchat.base",
             "expression": "3.8.0",
             "define": "CAU_VRCSDK_BASE_3_8_0"
+        },
+        {
+            "name": "com.vrchat.base",
+            "expression": "3.8.1-beta.2",
+            "define": "CAU_VRCSDK_BASE_3_8_1"
         }
     ],
     "noEngineReferences": false
