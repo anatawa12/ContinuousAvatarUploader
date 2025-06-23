@@ -11,7 +11,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         public const string AssetPath = "Assets/com.anatawa12.continuous-avatar-uploader.uploader-progress.asset";
 
-        // Semi-readonlu fields that describe the requested uploads
+        // Semi-readonly fields that describe the requested uploads
+
+        /// <summary>
+        /// The list of opened scenes that the user has requested to upload.
+        /// </summary>
+        public OpenedSceneInformation[] openedScenes = Array.Empty<OpenedSceneInformation>();
+
         /// <summary>
         /// The list of upload settings that the user has requested to upload.
         /// </summary>
@@ -57,6 +63,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
     }
     
+    [Serializable]
+    struct OpenedSceneInformation
+    {
+        public string scenePath;
+        public bool isLoaded;
+    }
+
     [Serializable]
     struct UploadErrorInfo
     {
