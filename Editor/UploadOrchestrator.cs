@@ -194,6 +194,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, exception));
                 }
 
+                Log($"Avatar {asset.uploadingAvatarIndex + 1}/{asset.uploadSettings.Length} uploaded for platform {asset.uploadingTargetPlatform}.");
+
                 WithTryCatch(() => OnUploadSingleAvatarFinished?.Invoke(asset, avatarToUpload));
 
                 // After uploading, we increment the index
