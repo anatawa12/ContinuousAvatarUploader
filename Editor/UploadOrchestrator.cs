@@ -55,6 +55,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
             }
 
+            Log("Resuming upload from progress asset.");
+
             // show window if it is not already open
             ContinuousAvatarUploader.OpenWindow();
 
@@ -73,6 +75,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (IsUploadInProgress())
                 throw new InvalidOperationException("An upload is already in progress. Please wait for it to finish or cancel it before starting a new one.");
 
+            Log($"Starting upload with {asset.uploadSettings.Length}");
             _cancellationTokenSource = new CancellationTokenSource();
 
             SessionState.SetBool(UploadInProgressSessionKey, true);
@@ -112,6 +115,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (currentPlatform != asset.uploadingTargetPlatform)
                 {
                     // The current platform is not the one we're uploading to, so we need to switch to the correct platform.
+                    Log("Switching target platform to " + asset.uploadingTargetPlatform);
                     if (!Uploader.StartSwitchTargetPlatformAsync(asset.uploadingTargetPlatform))
                     {
                         // If we failed to switch the platform, we should notify the user and stop the upload.
@@ -124,10 +128,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
 
                 // Wait for the builder to be ready.
+                Log("Trying to get the IVRCSdkAvatarBuilderApi");
                 IVRCSdkAvatarBuilderApi builder;
                 while (!VRCSdkControlPanel.TryGetBuilder(out builder))
                     await Task.Delay(100, CancellationToken);
 
+                Log("IVRCSdkAvatarBuilderApi is ready, Logging in if needed.");
                 try
                 {
                     if (!await Uploader.TryLogin())
@@ -150,6 +156,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 // We are ready to upload the next avatar.
                 var avatarToUpload = asset.uploadSettings[asset.uploadingAvatarIndex];
+                Log($"Uploading avatar {asset.uploadingAvatarIndex + 1}/{asset.uploadSettings.Length} for platform {asset.uploadingTargetPlatform}: {avatarToUpload.name}");
 
                 WithTryCatch(() => OnUploadSingleAvatarStarted?.Invoke(asset, avatarToUpload));
 
@@ -196,6 +203,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private static bool TrySelectNextPlatform(UploaderProgressAsset asset)
         {
+            Log($"Uploading finished for {asset.uploadingTargetPlatform} finished, moving to next platform.");
             if (!asset.uploadFinishedPlatforms.Contains(asset.uploadingTargetPlatform))
             {
                 asset.uploadFinishedPlatforms = asset.uploadFinishedPlatforms.Append(asset.uploadingTargetPlatform).ToArray();
@@ -206,6 +214,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 .FirstOrDefault();
             if (nextPlatformOrNull is { } nextPlatform)
             {
+                Log($"Next platform to upload to: {nextPlatform}");
                 // We have a next platform to upload to, so we reset the avatar index and set the new platform.
                 asset.uploadingTargetPlatform = nextPlatform;
                 asset.uploadingAvatarIndex = 0;
@@ -223,6 +232,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private static void FinishUpload(UploaderProgressAsset asset, bool successfully)
         {
             WithTryCatch(() => OnUploadFinished?.Invoke(asset, successfully));
+            Log($"[CAU Orchestrator] Upload finished: {successfully}");
 
             SessionState.EraseBool(UploadInProgressSessionKey);
             asset.Delete();
@@ -271,6 +281,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 Debug.LogException(e);
             }
+        }
+
+        private static void Log(string message)
+        {
+            Debug.Log($"[CAU Orchestrator] {message}");
         }
     }
 }
