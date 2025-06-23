@@ -30,6 +30,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [NonSerialized] private AvatarUploadSetting _currentUploadingAvatar;
         [SerializeField] private Vector2 uploadsScroll;
         [SerializeField] private Vector2 errorsScroll;
+        [SerializeField] private List<UploadErrorInfo> uploadErrors;
 
         private UploaderProgressAsset progressAsset;
 
@@ -110,6 +111,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             var loaded = UploaderProgressAsset.Load();
             progressAsset = loaded != null ? loaded : progressAsset;
+            progressAsset = progressAsset == null ? null : progressAsset;
+            uploadErrors = progressAsset?.uploadErrors ?? uploadErrors;
             var uploadInProgress = progressAsset != null;
             if (uploadInProgress)
             {
@@ -218,10 +221,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             EditorGUILayout.Space();
             GUILayout.Label("Errors from Previous Build:", EditorStyles.boldLabel);
             errorsScroll = EditorGUILayout.BeginScrollView(errorsScroll);
-            if (progressAsset == null || progressAsset.uploadErrors.Count == 0) GUILayout.Label("No Errors");
+            if (uploadErrors.Count == 0) GUILayout.Label("No Errors");
             else
             {
-                foreach (var previousUploadError in progressAsset.uploadErrors)
+                foreach (var previousUploadError in uploadErrors)
                 {
                     EditorGUILayout.ObjectField("Uploading", previousUploadError.uploadingAvatar,
                         typeof(AvatarUploadSetting), false);
