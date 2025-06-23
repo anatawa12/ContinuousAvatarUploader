@@ -95,6 +95,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 asset.uploadingTargetPlatform = asset.targetPlatforms.First();
             }
 
+            // if rollback is enabled, store the current build platform
+            if (asset.rollbackPlatform)
+            {
+                var currentBuildTarget = EditorUserBuildSettings.activeBuildTarget;
+                var currentBuildTargetGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+                asset.lastBuildPlatform = currentBuildTarget;
+                asset.lastBuildPlatformGroup = currentBuildTargetGroup;
+            }
+
             SessionState.SetBool(UploadInProgressSessionKey, true);
             asset.Save();
 
@@ -250,6 +259,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private static void FinishUpload(UploaderProgressAsset asset, bool successfully)
         {
+            // if rollback is enabled, restore the build platform first.
+            if (asset.rollbackPlatform && asset.lastBuildPlatform != EditorUserBuildSettings.activeBuildTarget)
+            {
+                asset.Save();
+                Log("Restoring the last build platform to " + asset.lastBuildPlatform);
+                if (EditorUserBuildSettings.SwitchActiveBuildTargetAsync(asset.lastBuildPlatformGroup,
+                        asset.lastBuildPlatform))
+                    return;
+                Log("Failed to restore the last build platform, please do it manually.");
+            }
+
             WithTryCatch(() => OnUploadFinished?.Invoke(asset, successfully));
             Log($"[CAU Orchestrator] Upload finished: {successfully}");
 

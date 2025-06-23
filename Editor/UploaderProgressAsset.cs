@@ -30,6 +30,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         /// The number of milliseconds to wait between each upload attempt.
         /// </summary>
         public int sleepMilliseconds;
+        /// <summary>
+        /// Whether to rollback the build platform after the upload is finished.
+        /// </summary>
+        public bool rollbackPlatform;
+        public BuildTarget lastBuildPlatform;
+        public BuildTargetGroup lastBuildPlatformGroup;
 
         // Mutable fields that describe the current progress of the upload
         /// <summary>

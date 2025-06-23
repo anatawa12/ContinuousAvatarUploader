@@ -31,5 +31,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             EditorPrefs.SetBool(EditorPrefsPrefix + "upload-for." + targetPlatform, value);
         }
+
+        public static bool RollbackBuildPlatform
+        {
+            get => EditorPrefs.GetBool(EditorPrefsPrefix + "rollback-build-platform", true);
+            set => EditorPrefs.SetBool(EditorPrefsPrefix + "rollback-build-platform", value);
+        }
     }
 }

@@ -153,6 +153,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 new GUIContent("Show Dialog when Finished", 
                     "If this is enabled, CAU will tell you upload finished."),
                 Preferences.ShowDialogWhenUploadFinished);
+            Preferences.RollbackBuildPlatform = EditorGUILayout.ToggleLeft(
+                new GUIContent("Rollback Build Platform", 
+                    "If this is enabled, CAU will rollback the build platform to the one before upload after upload finished."),
+                Preferences.RollbackBuildPlatform);
 
             EditorGUILayout.LabelField("Target Platforms", EditorStyles.boldLabel);
             foreach (var platform in Uploader.GetTargetPlatforms())
@@ -333,6 +337,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             progress.uploadSettings = GetUploadingAvatars().ToArray();
             progress.targetPlatforms = Uploader.GetTargetPlatforms().Where(Preferences.UploadFor).ToArray();
             progress.sleepMilliseconds = (int)(Preferences.SleepSeconds * 1000);
+            progress.rollbackPlatform = Preferences.RollbackBuildPlatform;
             UploadOrchestrator.StartUpload(progress);
         }
 
