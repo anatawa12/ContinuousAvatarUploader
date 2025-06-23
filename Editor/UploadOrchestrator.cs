@@ -31,7 +31,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private static void AssemblyLoaded()
         {
             var asset = UploaderProgressAsset.Load();
-            if (asset == null) return;
+            if (asset == null)
+            {
+                // No progress asset found, so we are not uploading anything.
+                SessionState.EraseBool(UploadInProgressSessionKey);
+                return;
+            }
 
             var isUploading = SessionState.GetBool(UploadInProgressSessionKey, false);
             if (!isUploading)
@@ -104,9 +109,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 asset.lastBuildPlatformGroup = currentBuildTargetGroup;
             }
 
-            SessionState.SetBool(UploadInProgressSessionKey, true);
             asset.Save();
 
+            SessionState.SetBool(UploadInProgressSessionKey, true);
             // Start the upload process.
             _ = UploadNextAvatar(asset);
         }
