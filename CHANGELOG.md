@@ -14,6 +14,9 @@ The format is based on [Keep a Changelog].
   - You can select platforms to upload in the uploader window.
 - Resume Uploads after Unity Editor Crash `#106`
   - If Unity Editor crashes while uploading avatars, the uploader will ask you to resume the uploads in the next upload.
+- Option to retry upload when network error occurs `#111`
+  - You also can select number of retries in the uploader window.
+  - This option is enabled by default with 1 retry. You can disable retry by setting "Retry Count" to 0.
 
 ### Changed
 - Current build platform is now selected by default on creating new AvatarUploadSetting `#110`
