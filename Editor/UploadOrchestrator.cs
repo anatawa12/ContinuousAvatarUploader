@@ -201,9 +201,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 // After uploading, we increment the index
                 asset.uploadingAvatarIndex++;
                 asset.Save();
-
-                // Continue uploading the next avatar.
-                await UploadNextAvatar(asset);
             }
             catch (Exception e)
             {
@@ -218,6 +215,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 });
                 FinishUpload(asset, false);
             }
+
+            // Continue uploading the next avatar.
+            await UploadNextAvatar(asset);
         }
 
         private static bool TrySelectNextPlatform(UploaderProgressAsset asset)
