@@ -115,10 +115,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 var totalCount = progressAsset.uploadSettings.Length;
                 var uploadingIndex = progressAsset.uploadingAvatarIndex;
+                var totalPlatforms = progressAsset.targetPlatforms.Length;
+                var uploadingTargetCount = progressAsset.uploadFinishedPlatforms.Length;
                 GUILayout.Label("UPLOAD IN PROGRESS");
                 EditorGUI.ProgressBar(GUILayoutUtility.GetRect(100, 20),
+                    (uploadingTargetCount + 0.5f) / totalPlatforms,
+                    $"Uploading for {progressAsset.uploadingTargetPlatform} ({uploadingTargetCount + 1} / {totalPlatforms} platforms)");
+                EditorGUI.ProgressBar(GUILayoutUtility.GetRect(100, 20),
                     (uploadingIndex + 0.5f) / totalCount,
-                    $"Uploading {uploadingIndex + 1} / {totalCount}");
+                    $"Uploading {uploadingIndex + 1} / {totalCount} for {progressAsset.uploadingTargetPlatform}");
                 if (_currentUploadingAvatar)
                 {
                     EditorGUILayout.ObjectField("Uploading", _currentUploadingAvatar, typeof(AvatarUploadSetting), true);
