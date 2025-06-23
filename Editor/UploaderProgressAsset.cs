@@ -105,7 +105,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         Windows,
         Android,
-        IOS,
+        iOS,
         
         // 
         LastIndex,

@@ -108,9 +108,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private void OnGUI()
         {
             var uploadInProgress = _guiState != State.Configuring;
+            var loaded = UploaderProgressAsset.Load();
+            progressAsset = loaded != null ? loaded : progressAsset;
             if (uploadInProgress)
             {
-                progressAsset = UploaderProgressAsset.Load()!;
                 var totalCount = progressAsset.uploadSettings.Length;
                 var uploadingIndex = progressAsset.uploadingAvatarIndex;
                 GUILayout.Label("UPLOAD IN PROGRESS");
@@ -144,6 +145,20 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     "If this is enabled, CAU will tell you upload finished."),
                 Preferences.ShowDialogWhenUploadFinished);
 
+            foreach (var platform in Uploader.GetTargetPlatforms())
+            {
+                var isEnabled = Preferences.UploadFor(platform);
+                var supported = Uploader.IsBuildSupportedInstalled(platform);
+                EditorGUI.BeginDisabledGroup(!supported && !isEnabled);
+                isEnabled = EditorGUILayout.ToggleLeft(
+                    new GUIContent($"Upload for {platform}", 
+                        supported ? $"If this is enabled, CAU will upload avatars for {platform} platform."
+                            : $"Build support for {platform} is not installed. "),
+                    isEnabled);
+                EditorGUI.EndDisabledGroup();
+                Preferences.SetUploadFor(platform, isEnabled);
+            }
+
             var checkResult = CheckUpload();
             if ((checkResult & UploadCheckResult.Uploading) != 0)
                 EditorGUILayout.HelpBox("Uploading", MessageType.Info);
@@ -164,6 +179,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     "Some avatars are going or taking thumbnail in PlayMode. " +
                     "To take thumbnail in PlayMode, Please Disable 'Reload Domain' Option in " +
                     "Enter Play Mode Settings in Editor in Project Settings",
+                    MessageType.Error);
+            if ((checkResult & UploadCheckResult.UnsupportedPlatformSelected) != 0)
+                EditorGUILayout.HelpBox(
+                    "Some target platforms are selected, but not supported by current build. " +
+                    "Please install the build support for those platforms in Unity Hub, or " +
+                    "uncheck the target platforms in Continuous Avatar Uploader settings.",
+                    MessageType.Error);
+            if ((checkResult & UploadCheckResult.NoPlatformsSelected) != 0)
+                EditorGUILayout.HelpBox(
+                    "No target platforms are selected. " +
+                    "Please select at least one target platform in Continuous Avatar Uploader settings.",
                     MessageType.Error);
             using (new EditorGUI.DisabledScope(checkResult != UploadCheckResult.Ok))
             {
@@ -211,19 +237,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             ControlPanelClosed = 1 << 5,
             NoAvatarBuilder = 1 << 6,
             PlayModeSettingsNotGood = 1 << 7,
+            UnsupportedPlatformSelected = 1 << 8,
+            NoPlatformsSelected = 1 << 9,
         }
 
-        private UploadCheckResult CheckUpload()
+        private UploadCheckResult CheckUpload() => CheckUploadStatic(GetUploadingAvatars(), Repaint);
+
+        private static UploadCheckResult CheckUploadStatic(IEnumerable<AvatarUploadSetting> avatars, [CanBeNull] Action repaint = null)
         {
             var result = UploadCheckResult.Ok;
-            if (_guiState != State.Configuring) result |= UploadCheckResult.Uploading;
-            if (settingsOrGroups.Length == 0) result |= UploadCheckResult.NoDescriptors;
-            if (settingsOrGroups.Any(x => !x)) result |= UploadCheckResult.AnyNull;
+            if (UploadOrchestrator.IsUploadInProgress()) result |= UploadCheckResult.Uploading;
             if (EditorApplication.isPlayingOrWillChangePlaymode) result |= UploadCheckResult.PlayMode;
-            if (!Uploader.VerifyCredentials(Repaint)) result |= UploadCheckResult.NoCredentials;
+            if (!Uploader.VerifyCredentials(repaint)) result |= UploadCheckResult.NoCredentials;
             if (!VRCSdkControlPanel.window) result |= UploadCheckResult.ControlPanelClosed;
             if (!VRCSdkControlPanel.TryGetBuilder<IVRCSdkAvatarBuilderApi>(out _)) result |= UploadCheckResult.NoAvatarBuilder;
-            if (!CheckPlaymodeSettings()) result |= UploadCheckResult.PlayModeSettingsNotGood;
+            if (!CheckPlaymodeSettings(avatars)) result |= UploadCheckResult.PlayModeSettingsNotGood;
+
+            foreach (var platform in Uploader.GetTargetPlatforms())
+            {
+                if (!Uploader.IsBuildSupportedInstalled(platform) && Preferences.UploadFor(platform))
+                    result |= UploadCheckResult.UnsupportedPlatformSelected;
+            }
+
+            if (!Uploader.GetTargetPlatforms().Any(Preferences.UploadFor))
+                result |= UploadCheckResult.NoPlatformsSelected;
+
             return result;
         }
 
@@ -234,7 +272,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             return true;
         }
 
-        private bool CheckPlaymodeSettings()
+        private static bool CheckPlaymodeSettings(IEnumerable<AvatarUploadSetting> avatars)
         {
             if (Utils.ReloadDomainDisabled())
                 return true;
@@ -242,7 +280,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (Preferences.TakeThumbnailInPlaymodeByDefault)
                 return false;
 
-            foreach (var avatarUploadSetting in GetUploadingAvatars())
+            foreach (var avatarUploadSetting in avatars)
             {
                 var currentInfo = avatarUploadSetting.GetCurrentPlatformInfo();
                 if (currentInfo.updateImage)
@@ -283,7 +321,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var progress = ScriptableObject.CreateInstance<UploaderProgressAsset>();
             progress.openedScenes = UploadOrchestrator.GetLastOpenedScenes();
             progress.uploadSettings = GetUploadingAvatars().ToArray();
-            progress.targetPlatforms = new[] { Uploader.GetCurrentTargetPlatform() };
+            progress.targetPlatforms = Uploader.GetTargetPlatforms().Where(Preferences.UploadFor).ToArray();
             progress.sleepMilliseconds = (int)(Preferences.SleepSeconds * 1000);
             UploadOrchestrator.StartUpload(progress);
         }

@@ -55,12 +55,18 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 "OK", "NO");
         }
 
+        public static IEnumerable<TargetPlatform> GetTargetPlatforms()
+        {
+            for (var platform = TargetPlatform.Windows; platform < TargetPlatform.LastIndex; platform++)
+                yield return platform;
+        }
+
         public static TargetPlatform GetCurrentTargetPlatform() =>
             EditorUserBuildSettings.selectedBuildTargetGroup switch
             {
                 BuildTargetGroup.Standalone => TargetPlatform.Windows,
                 BuildTargetGroup.Android => TargetPlatform.Android,
-                BuildTargetGroup.iOS => TargetPlatform.IOS,
+                BuildTargetGroup.iOS => TargetPlatform.iOS,
                 _ => TargetPlatform.LastIndex,
             };
 
@@ -68,7 +74,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             TargetPlatform.Windows => BuildTarget.StandaloneWindows64,
             TargetPlatform.Android => BuildTarget.Android,
-            TargetPlatform.IOS => BuildTarget.iOS,
+            TargetPlatform.iOS => BuildTarget.iOS,
             _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
         };
 
@@ -76,7 +82,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             TargetPlatform.Windows => BuildTargetGroup.Standalone,
             TargetPlatform.Android => BuildTargetGroup.Android,
-            TargetPlatform.IOS => BuildTargetGroup.iOS,
+            TargetPlatform.iOS => BuildTargetGroup.iOS,
             _ => throw new ArgumentOutOfRangeException(nameof(platform), platform, null)
         };
 
