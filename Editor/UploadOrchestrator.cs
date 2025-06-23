@@ -75,8 +75,25 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (IsUploadInProgress())
                 throw new InvalidOperationException("An upload is already in progress. Please wait for it to finish or cancel it before starting a new one.");
 
-            Log($"Starting upload with {asset.uploadSettings.Length}");
+            Log($"Starting upload with {asset.uploadSettings.Length} Avatars");
             _cancellationTokenSource = new CancellationTokenSource();
+
+            // Select the first platform to upload to.
+            var currentPlatform = Uploader.GetCurrentTargetPlatform();
+            if (asset.targetPlatforms.Length == 0)
+            {
+                throw new InvalidOperationException("No target platforms specified. Please select at least one target platform to upload to.");
+            }
+            else if (asset.targetPlatforms.Contains(currentPlatform))
+            {
+                // If the current platform is one of the target platforms, we can start uploading to it.
+                asset.uploadingTargetPlatform = currentPlatform;
+            }
+            else
+            {
+                // Otherwise, we select the first target platform.
+                asset.uploadingTargetPlatform = asset.targetPlatforms.First();
+            }
 
             SessionState.SetBool(UploadInProgressSessionKey, true);
             asset.Save();
