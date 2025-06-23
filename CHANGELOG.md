@@ -17,6 +17,9 @@ The format is based on [Keep a Changelog].
 - Option to retry upload when network error occurs `#111`
   - You also can select number of retries in the uploader window.
   - This option is enabled by default with 1 retry. You can disable retry by setting "Retry Count" to 0.
+- Thumbnail for CAU Avatar Settings `#112`
+  - The thumbnail is used in the project window.
+  - This preview is available only for prefab avatars, not for scene avatars for technical reasons.
 
 ### Changed
 - Current build platform is now selected by default on creating new AvatarUploadSetting `#110`

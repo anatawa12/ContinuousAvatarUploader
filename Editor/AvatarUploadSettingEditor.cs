@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using JetBrains.Annotations;
 using UnityEditor;
+using UnityEditor.Graphs;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
@@ -238,6 +239,56 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 scope();
                 EditorGUI.indentLevel--;
                 EditorGUI.EndDisabledGroup();
+            }
+        }
+
+        public override Texture2D RenderStaticPreview(string assetPath, Object[] subAssets, int width, int height)
+        {
+            var overlayTexture = AssetDatabase.LoadAssetAtPath<Texture2D>(AssetDatabase.GUIDToAssetPath("235dc340dbeca4d2d84f557bf52e93b4"));
+            if (overlayTexture == null) return null;
+            var target = this.target as AvatarUploadSetting;
+            if (target == null) return null;
+            if (!target.avatarDescriptor.IsAssetReference()) return null;
+            var targetAvatar = target.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+            if (targetAvatar == null) return null;
+            var targetGameObject = targetAvatar.gameObject;
+
+            /*
+            var renderUtility = new PreviewRenderUtility();
+            renderUtility.BeginPreview(new Rect(0, 0, width, height), GUIStyle.none);
+            renderUtility.AddSingleGO(Instantiate(targetGameObject));
+            renderUtility.Render(true);
+            var previewTexture = renderUtility.EndStaticPreview();
+            /*/
+            var editor = UnityEditor.Editor.CreateEditor(targetGameObject);
+            var previewTexture = editor.RenderStaticPreview("", Array.Empty<Object>(), width, height);
+            DestroyImmediate(editor);
+            // */
+            if (previewTexture == null) return null;
+ 
+            // overlay the "CAU Settings" text
+            var renderTexture = RenderTexture.GetTemporary(width, height, 0, GraphicsFormat.R8G8B8A8_SRGB);
+            try
+            {
+                // copy the overlay texture
+                RenderTexture.active = renderTexture;
+
+                // draw the overlay texture
+                GL.PushMatrix();
+                GL.LoadPixelMatrix(0, width, height, 0);
+                Graphics.DrawTexture(new Rect(0, 0, width, height), previewTexture);
+                Graphics.DrawTexture(new Rect(0, 0, width, height), overlayTexture);
+                GL.PopMatrix();
+
+                var texture2D = new Texture2D(width, height, TextureFormat.RGB24, false, false);
+                texture2D.ReadPixels(new Rect(0.0f, 0.0f, width, height), 0, 0);
+                texture2D.Apply();
+
+                return texture2D;
+            }
+            finally
+            {
+                RenderTexture.ReleaseTemporary(renderTexture);
             }
         }
 
