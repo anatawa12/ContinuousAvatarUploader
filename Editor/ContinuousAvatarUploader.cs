@@ -108,9 +108,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void OnGUI()
         {
-            var uploadInProgress = _guiState != State.Configuring;
             var loaded = UploaderProgressAsset.Load();
             progressAsset = loaded != null ? loaded : progressAsset;
+            var uploadInProgress = progressAsset != null;
             if (uploadInProgress)
             {
                 var totalCount = progressAsset.uploadSettings.Length;

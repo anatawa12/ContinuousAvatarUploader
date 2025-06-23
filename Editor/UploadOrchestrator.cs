@@ -105,16 +105,23 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     if (!TrySelectNextPlatform(asset)) return;
                 }
 
+                // sleep for a while to avoid overwhelming the server
+                await Task.Delay(asset.sleepMilliseconds);
+
                 var currentPlatform = Uploader.GetCurrentTargetPlatform();
                 if (currentPlatform != asset.uploadingTargetPlatform)
                 {
                     // The current platform is not the one we're uploading to, so we need to switch to the correct platform.
-                    Uploader.StartSwitchTargetPlatform(currentPlatform);
+                    if (!Uploader.StartSwitchTargetPlatformAsync(asset.uploadingTargetPlatform))
+                    {
+                        // If we failed to switch the platform, we should notify the user and stop the upload.
+                        WithTryCatch(() => OnRandomException?.Invoke(new Exception("Failed to switch target platform.")),
+                            () => EditorUtility.DisplayDialog("Continuous Avatar Uploader", "Failed to switch target platform.", "OK"));
+                        FinishUpload(asset, false);
+                        return;
+                    }
                     return;
                 }
-
-                // sleep for a while to avoid overwhelming the server
-                await Task.Delay(asset.sleepMilliseconds);
 
                 // Wait for the builder to be ready.
                 IVRCSdkAvatarBuilderApi builder;

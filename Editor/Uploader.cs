@@ -121,8 +121,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             return false;
         }
 
-        public static void StartSwitchTargetPlatform(TargetPlatform platform) => 
-            EditorUserBuildSettings.SwitchActiveBuildTarget(GetBuildTargetGroup(platform), GetBuildTarget(platform));
+        public static bool StartSwitchTargetPlatformAsync(TargetPlatform platform) => 
+            EditorUserBuildSettings.SwitchActiveBuildTargetAsync(GetBuildTargetGroup(platform), GetBuildTarget(platform));
 
         [CanBeNull] private static Func<BuildTarget, bool> _isPlatformSupportLoadedByBuildTargetMethod = null;
 
