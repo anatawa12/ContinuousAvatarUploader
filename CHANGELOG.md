@@ -8,22 +8,8 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
-- Add warning for avatars with all platforms disabled [`#105`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/105)
-- Support for Multi-platform Avatar Uploads `#106`
-  - You now can upload avatars for multiple platforms at once.
-  - You can select platforms to upload in the uploader window.
-- Resume Uploads after Unity Editor Crash `#106`
-  - If Unity Editor crashes while uploading avatars, the uploader will ask you to resume the uploads in the next upload.
-- Option to retry upload when network error occurs `#111`
-  - You also can select number of retries in the uploader window.
-  - This option is enabled by default with 1 retry. You can disable retry by setting "Retry Count" to 0.
-- Thumbnail for CAU Avatar Settings `#112`
-  - The thumbnail is used in the project window.
-  - This preview is available only for prefab avatars, not for scene avatars for technical reasons.
 
 ### Changed
-- Current build platform is now selected by default on creating new AvatarUploadSetting `#110`
-  - You still can change the platform in the inspector, and change multiple settings at once by selecting multiple AvatarUploadSettings (multi-editing).
 
 ### Deprecated
 
@@ -32,6 +18,25 @@ The format is based on [Keep a Changelog].
 ### Fixed
 
 ### Security
+
+## [0.3.8] - 2025-06-30
+### Added
+- Add warning for avatars with all platforms disabled [`#105`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/105)
+- Support for Multi-platform Avatar Uploads [`#106`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/106)
+  - You now can upload avatars for multiple platforms at once.
+  - You can select platforms to upload in the uploader window.
+- Resume Uploads after Unity Editor Crash [`#106`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/106)
+  - If Unity Editor crashes while uploading avatars, the uploader will ask you to resume the uploads in the next upload.
+- Option to retry upload when network error occurs [`#111`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/111)
+  - You also can select number of retries in the uploader window.
+  - This option is enabled by default with 1 retry. You can disable retry by setting "Retry Count" to 0.
+- Thumbnail for CAU Avatar Settings [`#112`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/112)
+  - The thumbnail is used in the project window.
+  - This preview is available only for prefab avatars, not for scene avatars for technical reasons.
+
+### Changed
+- Current build platform is now selected by default on creating new AvatarUploadSetting [`#110`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/110)
+  - You still can change the platform in the inspector, and change multiple settings at once by selecting multiple AvatarUploadSettings (multi-editing).
 
 ### Notes
 - If when you're using git or some other VCS in your avatar project, it's better to add `Assets/com.anatawa12.continuous-avatar-uploader.uploader-progress.asset` to your VCS ignore list.
@@ -178,7 +183,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.7...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...HEAD
+[0.3.8]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.5...v0.3.6
 [0.3.5]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.4...v0.3.5

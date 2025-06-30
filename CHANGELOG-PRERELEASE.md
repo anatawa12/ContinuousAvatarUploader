@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog].
 
 ### Security
 
+## [0.3.8] - 2025-06-30
 ## [0.3.8-beta.1] - 2025-06-23
 ### Added
 - Add warning for avatars with all platforms disabled [`#105`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/105)
@@ -189,7 +190,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8-beta.1...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...HEAD
+[0.3.8]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8-beta.1...v0.3.8
 [0.3.8-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.7...v0.3.8-beta.1
 [0.3.7]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.5...v0.3.6
