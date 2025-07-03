@@ -106,7 +106,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     task.TrySetResult(true);
                 }, e =>
                 {
-                    task.TrySetException(new Exception(e.Error));   
+                    task.TrySetException(new Exception(e?.Error ?? "Unknown error"));   
                 });
                 await task.Task;
             }

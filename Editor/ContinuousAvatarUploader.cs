@@ -30,7 +30,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [NonSerialized] private AvatarUploadSetting _currentUploadingAvatar;
         [SerializeField] private Vector2 uploadsScroll;
         [SerializeField] private Vector2 errorsScroll;
-        [SerializeField] private List<UploadErrorInfo> uploadErrors;
+        [SerializeField] private List<UploadErrorInfo> uploadErrors = new List<UploadErrorInfo>();
 
         private UploaderProgressAsset progressAsset;
 
