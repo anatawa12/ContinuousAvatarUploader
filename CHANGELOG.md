@@ -16,9 +16,12 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- Errors from GUI `#116`
 
 ### Security
+
+## [0.3.9] - 2025-07-03
+### Fixed
+- Errors from GUI [`#116`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/116)
 
 ## [0.3.8] - 2025-06-30
 ### Added
@@ -184,7 +187,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...HEAD
+[0.3.9]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.6...v0.3.7
 [0.3.6]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.5...v0.3.6
