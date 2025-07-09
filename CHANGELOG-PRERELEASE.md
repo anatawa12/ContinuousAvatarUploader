@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Unable to add elements to Setting Group Group `#119`
 
 ### Security
 
