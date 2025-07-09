@@ -16,9 +16,12 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- Unable to add elements to Setting Group Group `#119`
 
 ### Security
+
+## [0.3.10-beta.1] - 2025-07-09
+### Fixed
+- Unable to add elements to Setting Group Group [`#119`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/119)
 
 ## [0.3.9] - 2025-07-03
 ### Fixed
@@ -195,7 +198,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.1...HEAD
+[0.3.10-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...v0.3.10-beta.1
 [0.3.9]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8-beta.1...v0.3.8
 [0.3.8-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.7...v0.3.8-beta.1
