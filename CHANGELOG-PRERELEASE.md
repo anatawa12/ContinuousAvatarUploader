@@ -16,9 +16,12 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- Unable to cancel a build `#120`
 
 ### Security
+
+## [0.3.10-beta.2] - 2025-07-09
+### Fixed
+- Unable to cancel a build [`#120`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/120)
 
 ## [0.3.10-beta.1] - 2025-07-09
 ### Fixed
@@ -199,7 +202,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.1...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.2...HEAD
+[0.3.10-beta.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.1...v0.3.10-beta.2
 [0.3.10-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...v0.3.10-beta.1
 [0.3.9]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8-beta.1...v0.3.8
