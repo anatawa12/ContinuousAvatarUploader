@@ -122,6 +122,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         static async Task UploadNextAvatar(UploaderProgressAsset asset)
         {
+            if (CancellationToken.IsCancellationRequested)
+            {
+                Log("Upload cancelled by user. so we are finishing the upload.");
+                FinishUpload(asset, true);
+                return;
+            }
+
             try
             {
                 if (asset.uploadSettings.Length == 0)
@@ -202,6 +209,23 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         await Uploader.UploadSingle(avatarToUpload, builder, CancellationToken);
                         break;
                     }
+                    catch (OperationCanceledException exception) when (CancellationToken.IsCancellationRequested)
+                    {
+                        Debug.LogException(exception);
+                        errorsInThisTrial.Add(exception);
+                        foreach (var exception1 in errorsInThisTrial)
+                        {
+                            asset.uploadErrors.Add(new UploadErrorInfo
+                            {
+                                uploadingAvatar = avatarToUpload,
+                                targetPlatform = asset.uploadingTargetPlatform,
+                                message = exception1.ToString()
+                            });
+                        }
+                        asset.Save();
+                        WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, errorsInThisTrial));
+                        break;
+                    }
                     catch (Exception exception)
                     {
                         Debug.LogException(exception);
@@ -247,6 +271,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     message = e.ToString()
                 });
                 FinishUpload(asset, false);
+                return;
             }
 
             // Continue uploading the next avatar.

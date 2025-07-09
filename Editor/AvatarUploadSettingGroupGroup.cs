@@ -12,6 +12,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         // note: possible infinite loop
         internal override AvatarUploadSetting[] Settings =>
-            groups.SelectMany(x => x?.Settings ?? Array.Empty<AvatarUploadSettingOrGroup>()).ToArray();
+            groups.SelectMany(x => x?.Settings ?? Array.Empty<AvatarUploadSetting>()).ToArray();
     }
 }
