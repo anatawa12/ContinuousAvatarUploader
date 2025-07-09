@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog].
 
 ### Fixed
 - Unable to add elements to Setting Group Group `#119`
+- Unable to cancel a build `#120`
 
 ### Security
 
