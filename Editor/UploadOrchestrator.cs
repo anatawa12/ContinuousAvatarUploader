@@ -129,8 +129,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             public int callbackOrder => int.MaxValue;
 
-            public void OnActiveBuildTargetChanged(BuildTarget previousTarget, BuildTarget newTarget) =>
+            public void OnActiveBuildTargetChanged(BuildTarget previousTarget, BuildTarget newTarget)
+            {
+                Debug.Log($"Active build target changed from {previousTarget} to {newTarget}");
+                Debug.Log($"Current target platform is {Uploader.GetCurrentTargetPlatform()} " +
+                          $"(group: {EditorUserBuildSettings.selectedBuildTargetGroup}, target: {EditorUserBuildSettings.activeBuildTarget})");
                 EditorApplication.delayCall += ResumeUpload;
+            }
         }
 
         public static void CancelUpload() => _cancellationTokenSource.Cancel();
@@ -173,7 +178,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (currentPlatform != asset.uploadingTargetPlatform)
                 {
                     // The current platform is not the one we're uploading to, so we need to switch to the correct platform.
-                    Log("Switching target platform to " + asset.uploadingTargetPlatform);
+                    Log(
+                        $"Switching target platform to {asset.uploadingTargetPlatform} from {currentPlatform} " +
+                        $"(group: {EditorUserBuildSettings.selectedBuildTargetGroup}, target: {EditorUserBuildSettings.activeBuildTarget})");
                     if (!Uploader.StartSwitchTargetPlatformAsync(asset.uploadingTargetPlatform))
                     {
                         // If we failed to switch the platform, we should notify the user and stop the upload.
