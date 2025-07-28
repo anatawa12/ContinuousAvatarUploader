@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog].
 
 ### Security
 
+## [0.3.10-beta.4] - 2025-07-28
 ## [0.3.10-beta.3] - 2025-07-28
 ### Fixed
 - Uploader may freezes after changing platform [`#123`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/123)
@@ -206,7 +207,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.3...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.4...HEAD
+[0.3.10-beta.4]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.3...v0.3.10-beta.4
 [0.3.10-beta.3]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.2...v0.3.10-beta.3
 [0.3.10-beta.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.1...v0.3.10-beta.2
 [0.3.10-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...v0.3.10-beta.1
