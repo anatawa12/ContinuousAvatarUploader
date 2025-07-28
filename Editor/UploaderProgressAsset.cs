@@ -67,6 +67,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         /// </summary>
         public List<UploadErrorInfo> uploadErrors = new();
 
+        private bool isDeleting = false;
+
+        private void OnDestroy()
+        {
+            if (!isDeleting)
+                Debug.Log("UploaderProgressAsset is destroyed unexpectedly. You should not destroy this asset manually, it should use 'Delete' method instead.", this);
+        }
+
         public static UploaderProgressAsset? Load()
         {
             var loaded = AssetDatabase.LoadAssetAtPath<UploaderProgressAsset>(AssetPath);
@@ -75,6 +83,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public void Save()
         {
+            if (this == null)
+            {
+                throw new NullReferenceException("this UploaderProgressAsset is destroyed. You cannot save it.");
+            }
+
             if (!string.IsNullOrEmpty(AssetDatabase.GetAssetPath(this)))
             {
                 EditorUtility.SetDirty(this);
@@ -94,7 +107,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             if (AssetDatabase.LoadAssetAtPath<UploaderProgressAsset>(AssetPath) == this)
             {
+                isDeleting = true;
                 AssetDatabase.DeleteAsset(AssetPath);
+            }
+            else
+            {
+                Debug.Log("Deleting UploaderProgressAsset not at desired location. Can be a bug.", this);
+                isDeleting = true;
+                DestroyImmediate(this);
             }
         }
     }
