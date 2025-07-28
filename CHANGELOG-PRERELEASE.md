@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Uploader may freezes after changing platform `#123`
 
 ### Security
 

@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -25,18 +26,24 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public static event Action<Exception> OnLoginFailed;
         public static event Action<Exception> OnRandomException;
 
-        static UploadOrchestrator() => EditorApplication.delayCall += AssemblyLoaded;
+        static UploadOrchestrator() => EditorApplication.delayCall += ResumeUpload;
 
         private static CancellationTokenSource _cancellationTokenSource = new();
         private static CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
-        private static void AssemblyLoaded()
+        private static void ResumeUpload()
         {
+            if (_uploadInProgress)
+            {
+                Log("Upload is already in progress, so we are not resuming it.");
+                return;
+            }
             var asset = UploaderProgressAsset.Load();
             if (asset == null)
             {
                 // No progress asset found, so we are not uploading anything.
                 SessionState.EraseBool(UploadInProgressSessionKey);
+                Log("We are not uploading since no UploaderProgressAsset found.");
                 return;
             }
 
@@ -118,7 +125,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _ = UploadNextAvatar(asset);
         }
 
+        private class ActiveBuildTargetChangedCallback : IActiveBuildTargetChanged
+        {
+            public int callbackOrder => int.MaxValue;
+
+            public void OnActiveBuildTargetChanged(BuildTarget previousTarget, BuildTarget newTarget) =>
+                EditorApplication.delayCall += ResumeUpload;
+        }
+
         public static void CancelUpload() => _cancellationTokenSource.Cancel();
+
+        private static bool _uploadInProgress = false;
 
         static async Task UploadNextAvatar(UploaderProgressAsset asset)
         {
@@ -131,6 +148,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             try
             {
+                _uploadInProgress = true;
                 if (asset.uploadSettings.Length == 0)
                 {
                     // Nothing to upload, so we can finish the upload.
@@ -164,7 +182,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         FinishUpload(asset, false);
                         return;
                     }
-                    return;
+
+                    // In most cases, the platform switch is asynchronous, so we need to wait for it to complete.
+                    if (currentPlatform != asset.uploadingTargetPlatform) return;
+                    Log("Switched target platform to " + asset.uploadingTargetPlatform + " synchronously.");
                 }
 
                 // Wait for the builder to be ready.
@@ -180,7 +201,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     {
                         // Login failed, we should notify the user and stop the upload.
                         WithTryCatch(() => OnLoginFailed?.Invoke(new Exception("No user logged in.")),
-                            () => EditorUtility.DisplayDialog("Continuous Avatar Uploader", "Login Failed: No user logged in.", "OK"));
+                            () => EditorUtility.DisplayDialog("Continuous Avatar Uploader",
+                                "Login Failed: No user logged in.", "OK"));
                         FinishUpload(asset, false);
                         return;
                     }
@@ -272,6 +294,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 });
                 FinishUpload(asset, false);
                 return;
+            }
+            finally
+            {
+                _uploadInProgress = false;
             }
 
             // Continue uploading the next avatar.
