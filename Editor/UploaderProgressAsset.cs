@@ -69,6 +69,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private bool isDeleting = false;
 
+        private void OnDisable()
+        {
+            if (!isDeleting)
+                Debug.LogError("UploaderProgressAsset is unloaded unexpectedly. You should not unload this asset manually, it should use 'Delete' method instead.", this);
+        }
+
         private void OnDestroy()
         {
             if (!isDeleting)
