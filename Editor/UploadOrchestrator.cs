@@ -240,8 +240,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     }
                     catch (OperationCanceledException exception) when (CancellationToken.IsCancellationRequested)
                     {
-                        // Reload asset because it may have been unloaded by unity for some reason. (Could be a bug in Unity)
-                        asset = UploaderProgressAsset.Load() ?? asset;
                         Debug.LogException(exception);
                         errorsInThisTrial.Add(exception);
                         foreach (var exception1 in errorsInThisTrial)
@@ -259,8 +257,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     }
                     catch (Exception exception)
                     {
-                        // Reload asset because it may have been unloaded by unity for some reason. (Could be a bug in Unity)
-                        asset = UploaderProgressAsset.Load() ?? asset;
                         Debug.LogException(exception);
                         errorsInThisTrial.Add(exception);
 
@@ -283,9 +279,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         }
                     }
                 } while (true);
-
-                // Reload asset because it may have been unloaded by unity for some reason. (Could be a bug in Unity)
-                asset = UploaderProgressAsset.Load() ?? asset;
 
                 Log($"Avatar {asset.uploadingAvatarIndex + 1}/{asset.uploadSettings.Length} uploaded for platform {asset.uploadingTargetPlatform}.");
 
