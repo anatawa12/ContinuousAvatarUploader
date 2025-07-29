@@ -62,11 +62,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         public static TargetPlatform GetCurrentTargetPlatform() =>
-            EditorUserBuildSettings.selectedBuildTargetGroup switch
+            EditorUserBuildSettings.activeBuildTarget switch
             {
-                BuildTargetGroup.Standalone => TargetPlatform.Windows,
-                BuildTargetGroup.Android => TargetPlatform.Android,
-                BuildTargetGroup.iOS => TargetPlatform.iOS,
+                BuildTarget.StandaloneWindows or BuildTarget.StandaloneWindows64 => TargetPlatform.Windows,
+                BuildTarget.Android => TargetPlatform.Android,
+                BuildTarget.iOS => TargetPlatform.iOS,
                 _ => TargetPlatform.LastIndex,
             };
 
@@ -121,8 +121,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             return false;
         }
 
-        public static bool StartSwitchTargetPlatformAsync(TargetPlatform platform) => 
-            EditorUserBuildSettings.SwitchActiveBuildTargetAsync(GetBuildTargetGroup(platform), GetBuildTarget(platform));
+        public static bool StartSwitchTargetPlatformAsync(TargetPlatform platform)
+        {
+            var group = GetBuildTargetGroup(platform);
+            var target = GetBuildTarget(platform);
+            EditorUserBuildSettings.selectedBuildTargetGroup = group;
+            return EditorUserBuildSettings.SwitchActiveBuildTargetAsync(group, target);
+        }
 
         [CanBeNull] private static Func<BuildTarget, bool> _isPlatformSupportLoadedByBuildTargetMethod = null;
 
