@@ -555,7 +555,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         // Replace the old setting with the new one
                         _tempSettingsAsset.RemoveTemporarySetting(tempSetting);
                         _tempSettingsAsset.AddTemporarySetting(newTempSetting);
-                        return;
                     }
                 }
 
