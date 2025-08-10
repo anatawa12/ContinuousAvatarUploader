@@ -10,6 +10,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using VRC.SDK3A.Editor;
+using VRC.SDK3.Avatars.Components;
 using VRC.SDKBase.Editor;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
@@ -247,6 +248,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                             asset.uploadErrors.Add(new UploadErrorInfo
                             {
                                 uploadingAvatar = avatarToUpload,
+                                avatarName = avatarToUpload.name,
                                 targetPlatform = asset.uploadingTargetPlatform,
                                 message = exception1.ToString()
                             });
@@ -269,6 +271,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                                 asset.uploadErrors.Add(new UploadErrorInfo
                                 {
                                     uploadingAvatar = avatarToUpload,
+                                    avatarName = avatarToUpload.name,
                                     targetPlatform = asset.uploadingTargetPlatform,
                                     message = exception1.ToString()
                                 });
