@@ -574,7 +574,19 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     continue;
                 }
                 EditorGUILayout.BeginHorizontal();
-                EditorGUILayout.ObjectField(tempSetting.avatarName, tempSetting.avatarDescriptor.TryResolve(), typeof(GameObject), true);
+                EditorGUI.BeginChangeCheck();
+                var newDescriptor = EditorGUILayout.ObjectField(tempSetting.avatarName, tempSetting.avatarDescriptor.TryResolve(), typeof(VRCAvatarDescriptor), true) as VRCAvatarDescriptor;
+                if (EditorGUI.EndChangeCheck() && newDescriptor != null)
+                {
+                    var newTempSetting = CreateTemporarySettingFromDescriptor(newDescriptor);
+                    if (newTempSetting != null)
+                    {
+                        // Replace the old setting with the new one
+                        _tempSettingsAsset.RemoveTemporarySetting(tempSetting);
+                        _tempSettingsAsset.AddTemporarySetting(newTempSetting);
+                        return;
+                    }
+                }
 
                 if (GUILayout.Button("Remove", GUILayout.Width(60)))
                 {
