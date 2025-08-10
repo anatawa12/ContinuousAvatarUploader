@@ -182,8 +182,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 EditorGUI.indentLevel++;
 
-                DrawTemporaryPlatformSettings();
-
                 EditorGUILayout.Space();
                 HandleDragAndDrop();
 
@@ -524,42 +522,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             tempSetting.avatarDescriptor = new MaySceneReference(descriptor);
             tempSetting.avatarName = descriptor.gameObject.name;
 
-            tempSetting.windows.enabled = _tempSettingsAsset.tempWindowsEnabled;
-            tempSetting.quest.enabled = _tempSettingsAsset.tempAndroidEnabled;
-            tempSetting.ios.enabled = _tempSettingsAsset.tempIosEnabled;
+            tempSetting.windows.enabled = true;
+            tempSetting.quest.enabled = true;
+            tempSetting.ios.enabled = true;
 
             tempSetting.hideFlags = HideFlags.DontUnloadUnusedAsset;
 
             return tempSetting;
         }
 
-        private void DrawTemporaryPlatformSettings()
-        {
-            EditorGUILayout.LabelField("Platform Settings for All D&D Avatars:");
-
-            EditorGUI.BeginChangeCheck();
-            _tempSettingsAsset.tempWindowsEnabled = EditorGUILayout.ToggleLeft("Windows", _tempSettingsAsset.tempWindowsEnabled);
-            _tempSettingsAsset.tempAndroidEnabled = EditorGUILayout.ToggleLeft("Android", _tempSettingsAsset.tempAndroidEnabled);
-            _tempSettingsAsset.tempIosEnabled = EditorGUILayout.ToggleLeft("iOS", _tempSettingsAsset.tempIosEnabled);
-
-            if (EditorGUI.EndChangeCheck())
-            {
-                foreach (var tempSetting in _tempSettingsAsset.temporarySettings)
-                {
-                    if (tempSetting != null)
-                    {
-                        tempSetting.windows.enabled = _tempSettingsAsset.tempWindowsEnabled;
-                        tempSetting.quest.enabled = _tempSettingsAsset.tempAndroidEnabled;
-                        tempSetting.ios.enabled = _tempSettingsAsset.tempIosEnabled;
-                    }
-                }
-                // Save only if it's already an asset
-                if (AssetDatabase.Contains(_tempSettingsAsset))
-                {
-                    _tempSettingsAsset.Save();
-                }
-            }
-        }
 
         private void DrawTemporaryAvatarList()
         {

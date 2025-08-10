@@ -16,12 +16,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         /// </summary>
         public List<AvatarUploadSetting> temporarySettings = new List<AvatarUploadSetting>();
 
-        /// <summary>
-        /// Temporary platform settings for drag & drop avatars
-        /// </summary>
-        public bool tempWindowsEnabled = true;
-        public bool tempAndroidEnabled = true;
-        public bool tempIosEnabled = true;
 
         private bool isDeleting = false;
         private static bool isReloading = false;
@@ -61,16 +55,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 // Create instance in memory only, don't create asset file yet
                 loaded = CreateInstance<TemporarySettingsAsset>();
-                loaded.InitializePlatformSettings();
             }
             return loaded;
-        }
-
-        public void InitializePlatformSettings()
-        {
-            tempWindowsEnabled = Preferences.UploadFor(TargetPlatform.Windows);
-            tempAndroidEnabled = Preferences.UploadFor(TargetPlatform.Android);
-            tempIosEnabled = Preferences.UploadFor(TargetPlatform.iOS);
         }
 
         public void Save()
