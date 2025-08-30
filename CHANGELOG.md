@@ -16,11 +16,14 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- Unable to add elements to Setting Group Group `#119`
-- Unable to cancel a build `#120`
-- Uploader may freezes after changing platform `#123`
 
 ### Security
+
+## [0.3.10] - 2025-08-25
+### Fixed
+- Unable to add elements to Setting Group Group [`#119`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/119)
+- Unable to cancel a build [`#120`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/120)
+- Uploader may freezes after changing platform [`#123`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/123)
 
 ## [0.3.9] - 2025-07-03
 ### Fixed
@@ -190,7 +193,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10...HEAD
+[0.3.10]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...v0.3.10
 [0.3.9]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.7...v0.3.8
 [0.3.7]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.6...v0.3.7
