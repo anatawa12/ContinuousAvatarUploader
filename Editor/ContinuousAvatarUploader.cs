@@ -13,8 +13,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     public class ContinuousAvatarUploader : EditorWindow
     {
+        private const string TempGroupAssetPath = "Assets/com.anatawa12.continuous-avatar-uploader.temp-group.asset";
+
         [SerializeField] [ItemCanBeNull] [NotNull] internal AvatarUploadSettingOrGroup[] settingsOrGroups = Array.Empty<AvatarUploadSettingOrGroup>();
-        private TemporarySettingsAsset _tempSettingsAsset;
+        [SerializeField] private List<MaySceneReference> temporarySettings = new List<MaySceneReference>();
 
         [CanBeNull]
         internal static ContinuousAvatarUploader Instance
@@ -51,7 +53,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _settingsOrGroups = _serialized.FindProperty(nameof(settingsOrGroups));
             _settingsOrGroups.isExpanded = true;
 
-            _tempSettingsAsset = TemporarySettingsAsset.LoadOrCreateInMemory();
+            CleanupTempGroupAsset();
+
             VRCSdkControlPanel.OnSdkPanelEnable += OnSdkPanelEnableDisable;
             VRCSdkControlPanel.OnSdkPanelDisable += OnSdkPanelEnableDisable;
             UploadOrchestrator.OnUploadSingleAvatarStarted += OnUploadSingleAvatarStarted;
@@ -70,16 +73,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             UploadOrchestrator.OnUploadFinished -= OnUploadFinished;
             UploadOrchestrator.OnLoginFailed -= OnLoginFailed;
             UploadOrchestrator.OnRandomException -= OnRandomException;
-
-            if (_tempSettingsAsset != null)
-            {
-                if (AssetDatabase.Contains(_tempSettingsAsset))
-                {
-                    _tempSettingsAsset.Save();
-                }
-                _tempSettingsAsset.Delete();
-                _tempSettingsAsset = null;
-            }
+            CleanupTempGroupAsset();
         }
 
         private void OnSdkPanelEnableDisable(object sender, EventArgs e) => Repaint();
@@ -105,6 +99,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // if finished unsuccessfully, we should have shown error dialog already
             if (Preferences.ShowDialogWhenUploadFinished && successfully)
                 EditorUtility.DisplayDialog("Continuous Avatar Uploader", "Finished Uploading Avatars!", "OK");
+
+            CleanupTempGroupAsset();
+
             Repaint();
         }
 
@@ -185,7 +182,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 EditorGUILayout.Space();
                 HandleDragAndDrop();
 
-                if (_tempSettingsAsset.temporarySettings.Count > 0)
+                if (temporarySettings.Count > 0)
                 {
                     EditorGUILayout.Space();
                     DrawTemporaryAvatarList();
@@ -270,6 +267,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     {
                         EditorGUILayout.ObjectField("Uploading", previousUploadError.uploadingAvatar,
                             typeof(AvatarUploadSetting), false);
+                    }
+                    else if (previousUploadError.avatarDescriptor.asset != null
+                                && previousUploadError.avatarDescriptor.TryResolve() is VRCAvatarDescriptor descriptor)
+                    {
+                        EditorGUILayout.ObjectField("Uploading", descriptor, typeof(VRCAvatarDescriptor), false);
                     }
                     else
                     {
@@ -372,13 +374,76 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 .Where(x => x)
                 .SelectMany(x => x.Settings)
                 .Where(x => x)
-                .Concat(_tempSettingsAsset?.temporarySettings?.Where(x => x) ?? Enumerable.Empty<AvatarUploadSetting>());
+                .Concat(GetTemporaryAvatarUploadSettings());
+
+        private IEnumerable<AvatarUploadSetting> GetTemporaryAvatarUploadSettings()
+        {
+            var tempGroup = AssetDatabase.LoadAssetAtPath<AvatarUploadSettingGroup>(TempGroupAssetPath);
+            if (tempGroup != null)
+            {
+                return tempGroup.avatars ?? Array.Empty<AvatarUploadSetting>();
+            }
+            return Array.Empty<AvatarUploadSetting>();
+        }
+
+        private void CreateTempGroupForUpload()
+        {
+            var tempGroup = ScriptableObject.CreateInstance<AvatarUploadSettingGroup>();
+            tempGroup.name = "Temporary D&D Settings Group";
+
+            var tempSettings = new List<AvatarUploadSetting>();
+            foreach (var maySceneRef in temporarySettings)
+            {
+                if (maySceneRef.asset == null) continue;
+
+                var tempSetting = CreateTemporarySetting(maySceneRef);
+                if (tempSetting != null)
+                {
+                    tempSettings.Add(tempSetting);
+                }
+            }
+
+            tempGroup.avatars = tempSettings.ToArray();
+
+            // Save as asset
+            if (tempSettings.Count > 0)
+            {
+                AssetDatabase.CreateAsset(tempGroup, TempGroupAssetPath);
+
+                foreach (var setting in tempSettings)
+                {
+                    AssetDatabase.AddObjectToAsset(setting, tempGroup);
+                }
+
+                AssetDatabase.SaveAssetIfDirty(tempGroup);
+            }
+        }
+
+        private void CleanupTempGroupAsset()
+        {
+            var tempGroup = AssetDatabase.LoadAssetAtPath<AvatarUploadSettingGroup>(TempGroupAssetPath);
+            if (tempGroup == null) return;
+
+            var avatars = tempGroup.avatars;
+            if (avatars != null)
+            {
+                foreach (var avatar in avatars)
+                {
+                    if (avatar != null && AssetDatabase.Contains(avatar))
+                    {
+                        AssetDatabase.RemoveObjectFromAsset(avatar);
+                    }
+                }
+            }
+
+            AssetDatabase.DeleteAsset(TempGroupAssetPath);
+        }
 
         private void DoStartUpload()
         {
-            if (_tempSettingsAsset != null && _tempSettingsAsset.temporarySettings.Count > 0)
+            if (temporarySettings != null && temporarySettings.Count > 0)
             {
-                _tempSettingsAsset.SaveAsAsset();
+                CreateTempGroupForUpload();
             }
 
             var progress = ScriptableObject.CreateInstance<UploaderProgressAsset>();
@@ -503,11 +568,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         if (descriptor == null)
                             continue;
 
-                        var tempSetting = CreateTemporarySettingFromDescriptor(descriptor);
-                        if (tempSetting != null)
-                        {
-                            _tempSettingsAsset.AddTemporarySetting(tempSetting);
-                        }
+                        var maySceneRef = new MaySceneReference(descriptor);
+                        temporarySettings.Add(maySceneRef);
                     }
                     currentEvent.Use();
                     Repaint();
@@ -515,11 +577,14 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
-        private AvatarUploadSetting CreateTemporarySettingFromDescriptor(VRCAvatarDescriptor descriptor)
+        private AvatarUploadSetting CreateTemporarySetting(MaySceneReference maySceneRef)
         {
+            var descriptor = maySceneRef.TryResolve() as VRCAvatarDescriptor;
+            if (descriptor == null) return null;
+
             var tempSetting = ScriptableObject.CreateInstance<AvatarUploadSetting>();
             tempSetting.name = descriptor.gameObject.name;
-            tempSetting.avatarDescriptor = new MaySceneReference(descriptor);
+            tempSetting.avatarDescriptor = maySceneRef;
             tempSetting.avatarName = descriptor.gameObject.name;
 
             tempSetting.windows.enabled = true;
@@ -536,38 +601,36 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             EditorGUILayout.LabelField("Avatar List:");
 
-            for (int i = _tempSettingsAsset.temporarySettings.Count - 1; i >= 0; i--)
+            for (int i = temporarySettings.Count - 1; i >= 0; i--)
             {
-                var tempSetting = _tempSettingsAsset.temporarySettings[i];
-                if (tempSetting == null)
+                var maySceneRef = temporarySettings[i];
+                if (maySceneRef.asset == null)
                 {
-                    _tempSettingsAsset.temporarySettings.RemoveAt(i);
+                    temporarySettings.RemoveAt(i);
                     continue;
                 }
+
+                var descriptor = maySceneRef.TryResolve() as VRCAvatarDescriptor;
+                var avatarName = descriptor?.gameObject.name ?? "Missing Avatar";
+
                 EditorGUILayout.BeginHorizontal();
                 EditorGUI.BeginChangeCheck();
-                var newDescriptor = EditorGUILayout.ObjectField(tempSetting.avatarName, tempSetting.avatarDescriptor.TryResolve(), typeof(VRCAvatarDescriptor), true) as VRCAvatarDescriptor;
-                if (EditorGUI.EndChangeCheck() && newDescriptor != null)
+                var newDescriptor = EditorGUILayout.ObjectField(avatarName, descriptor, typeof(VRCAvatarDescriptor), true) as VRCAvatarDescriptor;
+                if (EditorGUI.EndChangeCheck() && newDescriptor != null && newDescriptor != descriptor)
                 {
-                    var newTempSetting = CreateTemporarySettingFromDescriptor(newDescriptor);
-                    if (newTempSetting != null)
-                    {
-                        // Replace the old setting with the new one
-                        _tempSettingsAsset.RemoveTemporarySetting(tempSetting);
-                        _tempSettingsAsset.AddTemporarySetting(newTempSetting);
-                    }
+                    temporarySettings[i] = new MaySceneReference(newDescriptor);
                 }
 
                 if (GUILayout.Button("Remove", GUILayout.Width(60)))
                 {
-                    _tempSettingsAsset.RemoveTemporarySetting(tempSetting);
+                    temporarySettings.RemoveAt(i);
                 }
                 EditorGUILayout.EndHorizontal();
             }
 
             if (GUILayout.Button("Clear All D&D Avatars"))
             {
-                _tempSettingsAsset.ClearAllTemporarySettings();
+                temporarySettings.Clear();
             }
         }
     }

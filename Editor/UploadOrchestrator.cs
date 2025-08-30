@@ -249,6 +249,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                             {
                                 uploadingAvatar = avatarToUpload,
                                 avatarName = avatarToUpload.name,
+                                avatarDescriptor = avatarToUpload.avatarDescriptor,
                                 targetPlatform = asset.uploadingTargetPlatform,
                                 message = exception1.ToString()
                             });
@@ -272,6 +273,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                                 {
                                     uploadingAvatar = avatarToUpload,
                                     avatarName = avatarToUpload.name,
+                                    avatarDescriptor = avatarToUpload.avatarDescriptor,
                                     targetPlatform = asset.uploadingTargetPlatform,
                                     message = exception1.ToString()
                                 });

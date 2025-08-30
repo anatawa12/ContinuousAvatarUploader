@@ -148,6 +148,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         public TargetPlatform targetPlatform;
         public AvatarUploadSetting uploadingAvatar;
+        public MaySceneReference avatarDescriptor;
         public string avatarName; // Name of the avatar being uploaded for fallback
         public string message;
     }
