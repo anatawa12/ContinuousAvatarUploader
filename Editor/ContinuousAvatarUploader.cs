@@ -34,6 +34,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [NonSerialized] private AvatarUploadSetting _currentUploadingAvatar;
         [SerializeField] private Vector2 uploadsScroll;
         [SerializeField] private Vector2 errorsScroll;
+        [SerializeField] private Vector2 temporaryAvatarsScroll;
         [SerializeField] private List<UploadErrorInfo> uploadErrors = new List<UploadErrorInfo>();
         [SerializeField] private bool dragDropFoldout = false;
 
@@ -601,6 +602,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             EditorGUILayout.LabelField("Avatar List:");
 
+            const float itemHeight = 20f;
+            const int maxVisibleItems = 8;
+
+            if (temporarySettings.Count > maxVisibleItems)
+            {
+                temporaryAvatarsScroll = EditorGUILayout.BeginScrollView(
+                    temporaryAvatarsScroll,
+                    GUILayout.MaxHeight(maxVisibleItems * itemHeight)
+                );
+            }
+
             for (int i = temporarySettings.Count - 1; i >= 0; i--)
             {
                 var maySceneRef = temporarySettings[i];
@@ -626,6 +638,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     temporarySettings.RemoveAt(i);
                 }
                 EditorGUILayout.EndHorizontal();
+            }
+
+            if (temporarySettings.Count > maxVisibleItems)
+            {
+                EditorGUILayout.EndScrollView();
             }
 
             if (GUILayout.Button("Clear All D&D Avatars"))
