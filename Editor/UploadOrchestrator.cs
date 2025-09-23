@@ -66,6 +66,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     // User chose not to resume the upload, so we clear the session state and remove the asset.
                     SessionState.EraseBool(UploadInProgressSessionKey);
                     asset.Delete();
+                    return;
                 }
             }
 
