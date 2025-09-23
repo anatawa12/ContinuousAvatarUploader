@@ -17,7 +17,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-
+- Stop resuming upload when user declines
 ### Security
 
 ## [0.3.10] - 2025-08-25
