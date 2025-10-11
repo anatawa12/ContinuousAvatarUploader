@@ -16,9 +16,12 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- Stop resuming upload when user declines [`#130`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/130)
+
 ### Security
 
+## [0.3.11] - 2025-10-11
+### Fixed
+- Stop resuming upload when user declines [`#130`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/130)
 ## [0.3.11-beta.1] - 2025-09-12
 ### Added
 - Compatibility with VRCSDK 3.9.0 [`#128`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/128)
@@ -213,7 +216,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.11-beta.1...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.11...HEAD
+[0.3.11]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.11-beta.1...v0.3.11
 [0.3.11-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10...v0.3.11-beta.1
 [0.3.10]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.5...v0.3.10
 [0.3.10-beta.5]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10-beta.4...v0.3.10-beta.5
