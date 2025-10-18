@@ -270,7 +270,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                             typeof(AvatarUploadSetting), false);
                     }
                     else if (previousUploadError.avatarDescriptor.asset != null
-                                && previousUploadError.avatarDescriptor.TryResolve() is VRCAvatarDescriptor descriptor)
+                                && previousUploadError.avatarDescriptor.GetCachedResolve() is VRCAvatarDescriptor descriptor)
                     {
                         EditorGUILayout.ObjectField("Uploading", descriptor, typeof(VRCAvatarDescriptor), false);
                     }
@@ -580,7 +580,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private AvatarUploadSetting CreateTemporarySetting(MaySceneReference maySceneRef)
         {
-            var descriptor = maySceneRef.TryResolve() as VRCAvatarDescriptor;
+            var descriptor = maySceneRef.GetCachedResolve() as VRCAvatarDescriptor;
             if (descriptor == null) return null;
 
             var tempSetting = ScriptableObject.CreateInstance<AvatarUploadSetting>();
@@ -622,7 +622,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     continue;
                 }
 
-                var descriptor = maySceneRef.TryResolve() as VRCAvatarDescriptor;
+                var descriptor = maySceneRef.GetCachedResolve() as VRCAvatarDescriptor;
                 var avatarName = descriptor?.gameObject.name ?? "Missing Avatar";
 
                 EditorGUILayout.BeginHorizontal();

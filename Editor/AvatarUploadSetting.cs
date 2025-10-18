@@ -62,6 +62,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public ulong objectId;
         public ulong prefabId;
 
+        [NonSerialized] private Object _cachedResolvedObject;
+        [NonSerialized] private bool _hasCached;
+
         public MaySceneReference(Object obj)
         {
             if (obj is SceneAsset) throw new Exception("SceneAsset cannot be saved");
@@ -97,6 +100,16 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             System.Diagnostics.Debug.Assert(
                 GlobalObjectId.TryParse($"GlobalObjectId_V1-2-{sceneGuid}-{objectId}-{prefabId}", out var oid));
             return GlobalObjectId.GlobalObjectIdentifierToObjectSlow(oid);
+        }
+
+        public Object GetCachedResolve()
+        {
+            if (!_hasCached || _cachedResolvedObject == null)
+            {
+                _cachedResolvedObject = TryResolve();
+                _hasCached = true;
+            }
+            return _cachedResolvedObject;
         }
 
         public bool IsNull() => asset == null || asset is SceneAsset && objectId == 0;
