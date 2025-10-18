@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- Drag & drop avatar upload [`#127`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/127)
 
 ### Changed
 
