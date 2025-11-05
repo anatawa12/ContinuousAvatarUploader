@@ -464,6 +464,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             public AssetUploadAvatarScope(AvatarUploadSetting avatar)
             {
                 var avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
+                // The AvatarDescriptor (prefab) instance can be unloaded, while the reference exists
+                if (avatarDescriptor is not null && !avatarDescriptor)
+                    avatarDescriptor = EditorUtility.InstanceIDToObject(avatarDescriptor.GetInstanceID()) as VRCAvatarDescriptor;
                 if (!avatarDescriptor) return;
 
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
