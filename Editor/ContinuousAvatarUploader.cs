@@ -13,8 +13,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     public class ContinuousAvatarUploader : EditorWindow
     {
-        private const string TempGroupAssetPath = "Assets/com.anatawa12.continuous-avatar-uploader.temp-group.asset";
-
         [SerializeField] [ItemCanBeNull] [NotNull] internal AvatarUploadSettingOrGroup[] settingsOrGroups = Array.Empty<AvatarUploadSettingOrGroup>();
         [SerializeField] private List<MaySceneReference> temporarySettings = new List<MaySceneReference>();
 
@@ -301,7 +299,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             NoPlatformsSelected = 1 << 9,
         }
 
-        private UploadCheckResult CheckUpload() => CheckUploadStatic(GetUploadingAvatars(), Repaint);
+        // We do omit temp since play mode settings is always default
+        private UploadCheckResult CheckUpload() => CheckUploadStatic(GetUploadingAvatars(includeTemp: false), Repaint);
 
         private static UploadCheckResult CheckUploadStatic(IEnumerable<AvatarUploadSetting> avatars, [CanBeNull] Action repaint = null)
         {
@@ -370,28 +369,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             return true;
         }
 
-        private IEnumerable<AvatarUploadSetting> GetUploadingAvatars() =>
+        private IEnumerable<AvatarUploadSetting> GetUploadingAvatars(bool includeTemp = true) =>
             settingsOrGroups
                 .Where(x => x)
                 .SelectMany(x => x.Settings)
                 .Where(x => x)
-                .Concat(GetTemporaryAvatarUploadSettings());
+                .Concat(includeTemp ? CreateTemporarySettings() : Array.Empty<AvatarUploadSetting>());
 
-        private IEnumerable<AvatarUploadSetting> GetTemporaryAvatarUploadSettings()
+        private List<AvatarUploadSetting> CreateTemporarySettings()
         {
-            var tempGroup = AssetDatabase.LoadAssetAtPath<AvatarUploadSettingGroup>(TempGroupAssetPath);
-            if (tempGroup != null)
-            {
-                return tempGroup.avatars ?? Array.Empty<AvatarUploadSetting>();
-            }
-            return Array.Empty<AvatarUploadSetting>();
-        }
-
-        private void CreateTempGroupForUpload()
-        {
-            var tempGroup = ScriptableObject.CreateInstance<AvatarUploadSettingGroup>();
-            tempGroup.name = "Temporary D&D Settings Group";
-
             var tempSettings = new List<AvatarUploadSetting>();
             foreach (var maySceneRef in temporarySettings)
             {
@@ -404,48 +390,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
             }
 
-            tempGroup.avatars = tempSettings.ToArray();
-
-            // Save as asset
-            if (tempSettings.Count > 0)
-            {
-                AssetDatabase.CreateAsset(tempGroup, TempGroupAssetPath);
-
-                foreach (var setting in tempSettings)
-                {
-                    AssetDatabase.AddObjectToAsset(setting, tempGroup);
-                }
-
-                AssetDatabase.SaveAssetIfDirty(tempGroup);
-            }
+            return tempSettings;
         }
 
         private void CleanupTempGroupAsset()
         {
-            var tempGroup = AssetDatabase.LoadAssetAtPath<AvatarUploadSettingGroup>(TempGroupAssetPath);
-            if (tempGroup == null) return;
-
-            var avatars = tempGroup.avatars;
-            if (avatars != null)
-            {
-                foreach (var avatar in avatars)
-                {
-                    if (avatar != null && AssetDatabase.Contains(avatar))
-                    {
-                        AssetDatabase.RemoveObjectFromAsset(avatar);
-                    }
-                }
-            }
-
-            AssetDatabase.DeleteAsset(TempGroupAssetPath);
         }
 
         private void DoStartUpload()
         {
-            if (temporarySettings != null && temporarySettings.Count > 0)
-            {
-                CreateTempGroupForUpload();
-            }
 
             var progress = ScriptableObject.CreateInstance<UploaderProgressAsset>();
             progress.openedScenes = UploadOrchestrator.GetLastOpenedScenes();
