@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
-    internal class UploaderProgressAsset : ScriptableObject
+    public sealed class UploaderProgressAsset : ScriptableObject
     {
         public const string AssetPath = "Assets/com.anatawa12.continuous-avatar-uploader.uploader-progress.asset";
 
@@ -137,21 +137,21 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     }
     
     [Serializable]
-    struct OpenedSceneInformation
+    public struct OpenedSceneInformation
     {
         public string scenePath;
         public bool isLoaded;
     }
 
     [Serializable]
-    struct UploadErrorInfo
+    public struct UploadErrorInfo
     {
         public TargetPlatform targetPlatform;
         public AvatarUploadSetting uploadingAvatar;
         public string message;
     }
 
-    enum TargetPlatform
+    public enum TargetPlatform
     {
         Windows,
         Android,

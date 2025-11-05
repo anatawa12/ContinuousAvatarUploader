@@ -15,7 +15,7 @@ using VRC.SDKBase.Editor;
 namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     [InitializeOnLoad]
-    static class UploadOrchestrator
+    public static class UploadOrchestrator
     {
         private const string UploadInProgressSessionKey = "com.anatawa12.continuous-avatar-uploader.upload-in-progress";
 
