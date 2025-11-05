@@ -187,7 +187,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     onStartUpload?.Invoke(avatar, index);
                     try
                     {
-                        await UploadSingle(avatar, builder, cancellationToken);
+                        await UploadSingle(avatar, builder, cancellationToken: cancellationToken);
                     }
                     catch (Exception e)
                     {
@@ -206,6 +206,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public static async Task UploadSingle(
             AvatarUploadSetting avatar,
             IVRCSdkAvatarBuilderApi builder,
+            int uploadRetryCount = 3,
             CancellationToken cancellationToken = default)
         {
             CheckForPreconditions(builder);
@@ -226,6 +227,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                         scope.AvatarDescriptor, 
                         playmodeScope, 
                         builder,
+                        uploadRetryCount,
                         scope.SaveBlueprintId,
                         cancellationToken);
                 }
@@ -236,6 +238,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             VRCAvatarDescriptor avatarDescriptor,
             PreventEnteringPlayModeScope playmodeScope,
             IVRCSdkAvatarBuilderApi builder,
+            int uploadRetryCount = 3,
             [CanBeNull] Action<string> saveBlueprintId = null,
             CancellationToken cancellationToken = default)
         {
@@ -353,12 +356,45 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             if (picturePath != null)
             {
-                await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath, 
-                    cancellationToken: cancellationToken);
+                await UploadWithRetry(async () =>
+                {
+                    vrcAvatar = await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
+                        cancellationToken: cancellationToken);
+                });
             }
 
-            vrcAvatar = await VRCApi.UpdateAvatarBundle(vrcAvatar.ID, vrcAvatar, bundlePath,
-                cancellationToken: cancellationToken);
+            await UploadWithRetry(async () =>
+            {
+                vrcAvatar = await VRCApi.UpdateAvatarBundle(vrcAvatar.ID, vrcAvatar, bundlePath,
+                    cancellationToken: cancellationToken);
+            });
+
+            async Task UploadWithRetry(Func<Task> uploadAction)
+            {
+                var remainingRetries = uploadRetryCount;
+                for (;;)
+                {
+                    try
+                    {
+                        await uploadAction();
+                        return;
+                    }
+                    catch (UploadException e)
+                    {
+                        if (e.Message == "This file was already uploaded")
+                        {
+                            Debug.Log("Uploading skipped: already uploaded");
+                        }
+
+                        if (remainingRetries == 0) throw;
+                        remainingRetries--;
+
+                        var currentTry = uploadRetryCount - remainingRetries;
+                        Debug.LogWarning(
+                            $"Uploading failed with exception, retrying... ({currentTry}/{uploadRetryCount}): {e}");
+                    }
+                }
+            }
 
             // update description
             // This process may also not required with 

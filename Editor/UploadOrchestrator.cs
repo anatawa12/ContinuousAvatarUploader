@@ -236,7 +236,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     try
                     {
-                        await Uploader.UploadSingle(avatarToUpload, builder, CancellationToken);
+                        await Uploader.UploadSingle(avatarToUpload, builder, cancellationToken: CancellationToken);
                         break;
                     }
                     catch (OperationCanceledException exception) when (CancellationToken.IsCancellationRequested)
