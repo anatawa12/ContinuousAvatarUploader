@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Unexpected Avatar Not Found error with prefab in setting `#133`
 
 ### Security
 
