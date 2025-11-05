@@ -230,56 +230,22 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 WithTryCatch(() => OnUploadSingleAvatarStarted?.Invoke(asset, avatarToUpload));
 
-                var trialIndex = 0;
-                var errorsInThisTrial = new List<Exception>();
-                do
+                try
                 {
-                    try
+                    await Uploader.UploadSingle(avatarToUpload, builder, asset.retryCount, cancellationToken: CancellationToken);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                    asset.uploadErrors.Add(new UploadErrorInfo
                     {
-                        await Uploader.UploadSingle(avatarToUpload, builder, cancellationToken: CancellationToken);
-                        break;
-                    }
-                    catch (OperationCanceledException exception) when (CancellationToken.IsCancellationRequested)
-                    {
-                        Debug.LogException(exception);
-                        errorsInThisTrial.Add(exception);
-                        foreach (var exception1 in errorsInThisTrial)
-                        {
-                            asset.uploadErrors.Add(new UploadErrorInfo
-                            {
-                                uploadingAvatar = avatarToUpload,
-                                targetPlatform = asset.uploadingTargetPlatform,
-                                message = exception1.ToString()
-                            });
-                        }
-                        asset.Save();
-                        WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, errorsInThisTrial));
-                        break;
-                    }
-                    catch (Exception exception)
-                    {
-                        Debug.LogException(exception);
-                        errorsInThisTrial.Add(exception);
-
-                        trialIndex++;
-
-                        if (trialIndex > asset.retryCount || IsUnRetryableException(exception))
-                        {
-                            foreach (var exception1 in errorsInThisTrial)
-                            {
-                                asset.uploadErrors.Add(new UploadErrorInfo
-                                {
-                                    uploadingAvatar = avatarToUpload,
-                                    targetPlatform = asset.uploadingTargetPlatform,
-                                    message = exception1.ToString()
-                                });
-                            }
-                            asset.Save();
-                            WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, errorsInThisTrial));
-                            break;
-                        }
-                    }
-                } while (true);
+                        uploadingAvatar = avatarToUpload,
+                        targetPlatform = asset.uploadingTargetPlatform,
+                        message = exception.ToString()
+                    });
+                    asset.Save();
+                    WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, new List<Exception> { exception }));
+                }
 
                 Log($"Avatar {asset.uploadingAvatarIndex + 1}/{asset.uploadSettings.Length} uploaded for platform {asset.uploadingTargetPlatform}.");
 
