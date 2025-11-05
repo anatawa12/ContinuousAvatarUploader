@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog].
 ### Added
 
 ### Changed
+- retry will not re-build avatar when the upload fails `#134`
+    - retry building avatar did not retry on build failures before, so now it just retries upload without rebuilding.
 
 ### Deprecated
 
