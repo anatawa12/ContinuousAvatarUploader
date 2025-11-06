@@ -232,8 +232,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 try
                 {
-                    var retryCount = asset.strictMode ? 0 : asset.retryCount;
-                    await Uploader.UploadSingle(avatarToUpload, builder, retryCount, cancellationToken: CancellationToken);
+                    await Uploader.UploadSingle(avatarToUpload, builder, asset.retryCount, cancellationToken: CancellationToken);
                 }
                 catch (Exception exception)
                 {
@@ -247,9 +246,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     asset.Save();
                     WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, new List<Exception> { exception }));
 
-                    if (asset.strictMode)
+                    if (!asset.continueUploadOnError)
                     {
-                        Log("Strict mode is enabled, so we are finishing the upload due to the error.");
+                        Log("Continue upload other avatars on error is disabled, so we are finishing the upload due to the error.");
                         FinishUpload(asset, false);
                         return;
                     }

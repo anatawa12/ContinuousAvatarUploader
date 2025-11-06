@@ -45,9 +45,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public int retryCount;
 
         /// <summary>
-        /// Strict mode will stop uploading when any error occurs. It will ignore the retry count.
+        /// Whether to continue uploading other avatars when an build or upload error occurs.
         /// </summary>
-        public bool strictMode;
+        public bool continueUploadOnError;
 
         // Mutable fields that describe the current progress of the upload
         /// <summary>

@@ -157,10 +157,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 new GUIContent("Rollback Build Platform", 
                     "If this is enabled, CAU will rollback the build platform to the one before upload after upload finished."),
                 Preferences.RollbackBuildPlatform);
-            Preferences.StrictMode = EditorGUILayout.ToggleLeft(
-                new GUIContent("Strict Mode",
-                    "If this is enabled, CAU will stop uploading avatars when any error occurs. It will ignore retry count."),
-                Preferences.StrictMode);
+            Preferences.ContinueUploadOnError = EditorGUILayout.ToggleLeft(
+                new GUIContent("Continue upload other avatars on build or upload error",
+                    "If this is enabled, CAU will continue uploading other avatars even if some avatar build or upload fails."),
+                Preferences.ContinueUploadOnError);
             Preferences.RetryCount = EditorGUILayout.IntField(
                 new GUIContent("Retry Count", "The number of retries to attempt for each upload. Zero means no retries, so only one attempt will be made."),
                 Preferences.RetryCount);
@@ -346,7 +346,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             progress.sleepMilliseconds = (int)(Preferences.SleepSeconds * 1000);
             progress.rollbackPlatform = Preferences.RollbackBuildPlatform;
             progress.retryCount = Preferences.RetryCount;
-            progress.strictMode = Preferences.StrictMode;
+            progress.continueUploadOnError = Preferences.ContinueUploadOnError;
             UploadOrchestrator.StartUpload(progress);
         }
 
