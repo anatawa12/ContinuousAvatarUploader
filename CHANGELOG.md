@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- Strict mode to stop uploading if any error occurs `#136`
 
 ### Changed
 - retry will not re-build avatar when the upload fails `#134`
