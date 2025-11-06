@@ -159,7 +159,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 Preferences.RollbackBuildPlatform);
             Preferences.ContinueUploadOnError = EditorGUILayout.ToggleLeft(
                 new GUIContent("Continue upload other avatars on build or upload error",
-                    "If this is enabled, CAU will continue uploading other avatars even if some avatar build or upload fails."),
+                    "If this is enabled, CAU will continue uploading other avatars even if some avatar build or upload (if reach retry count limit) fails."),
                 Preferences.ContinueUploadOnError);
             Preferences.RetryCount = EditorGUILayout.IntField(
                 new GUIContent("Retry Count", "The number of retries to attempt for each upload. Zero means no retries, so only one attempt will be made."),
