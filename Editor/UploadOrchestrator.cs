@@ -232,7 +232,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 try
                 {
-                    await Uploader.UploadSingle(avatarToUpload, builder, asset.retryCount, cancellationToken: CancellationToken);
+                    var retryCount = asset.strictMode ? 0 : asset.retryCount;
+                    await Uploader.UploadSingle(avatarToUpload, builder, retryCount, cancellationToken: CancellationToken);
                 }
                 catch (Exception exception)
                 {
