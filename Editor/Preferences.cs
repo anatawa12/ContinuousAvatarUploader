@@ -43,5 +43,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             get => EditorPrefs.GetInt(EditorPrefsPrefix + "retry-count", 1);
             set => EditorPrefs.SetInt(EditorPrefsPrefix + "retry-count", value);
         }
+
+        public static bool StrictMode
+        {
+            get => EditorPrefs.GetBool(EditorPrefsPrefix + "strict-mode", false);
+            set => EditorPrefs.SetBool(EditorPrefsPrefix + "strict-mode", value);
+        }
     }
 }

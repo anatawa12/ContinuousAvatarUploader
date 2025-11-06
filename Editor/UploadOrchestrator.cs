@@ -245,6 +245,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     });
                     asset.Save();
                     WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, new List<Exception> { exception }));
+
+                    if (asset.strictMode)
+                    {
+                        Log("Strict mode is enabled, so we are finishing the upload due to the error.");
+                        FinishUpload(asset, false);
+                        return;
+                    }
                 }
 
                 Log($"Avatar {asset.uploadingAvatarIndex + 1}/{asset.uploadSettings.Length} uploaded for platform {asset.uploadingTargetPlatform}.");
