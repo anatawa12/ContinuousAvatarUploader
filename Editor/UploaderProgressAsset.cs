@@ -44,6 +44,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         // not on the asset so restarting the editor while uploading a avatar will reset the retry count.
         public int retryCount;
 
+        /// <summary>
+        /// Whether to continue uploading other avatars when an build or upload error occurs.
+        /// </summary>
+        public bool continueUploadOnError;
+
         // Mutable fields that describe the current progress of the upload
         /// <summary>
         /// The index of the current upload is in progress.

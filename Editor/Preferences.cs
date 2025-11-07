@@ -43,5 +43,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             get => EditorPrefs.GetInt(EditorPrefsPrefix + "retry-count", 1);
             set => EditorPrefs.SetInt(EditorPrefsPrefix + "retry-count", value);
         }
+
+        public static bool ContinueUploadOnError
+        {
+            get => EditorPrefs.GetBool(EditorPrefsPrefix + "continue-upload-on-error", true);
+            set => EditorPrefs.SetBool(EditorPrefsPrefix + "continue-upload-on-error", value);
+        }
     }
 }
