@@ -123,12 +123,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 AssetDatabase.CreateAsset(this, AssetPath);
             }
+
+            // Add non-persistent upload settings to the asset to avoid losing them on domain reload
+            foreach (var setting in uploadSettings)
+            {
+                if (string.IsNullOrEmpty(AssetDatabase.GetAssetPath(setting)))
+                {
+                    setting.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                    AssetDatabase.AddObjectToAsset(setting, this);
+                }
+            }
         }
 
         public void Delete()
         {
             if (AssetDatabase.LoadAssetAtPath<UploaderProgressAsset>(AssetPath) == this)
             {
+                // Remove upload settings from the asset to avoid deleting them with the asset
+                foreach (var setting in uploadSettings)
+                {
+                    if (AssetDatabase.GetAssetPath(setting) == AssetPath)
+                    {
+                        setting.hideFlags = HideFlags.DontUnloadUnusedAsset;
+                        AssetDatabase.RemoveObjectFromAsset(setting);
+                    }
+                }
                 isDeleting = true;
                 AssetDatabase.DeleteAsset(AssetPath);
             }
@@ -153,6 +172,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     {
         public TargetPlatform targetPlatform;
         public AvatarUploadSetting uploadingAvatar;
+        public MaySceneReference avatarDescriptor;
+        public string avatarName; // Name of the avatar being uploaded for fallback
         public string message;
     }
 

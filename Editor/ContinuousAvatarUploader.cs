@@ -6,6 +6,7 @@ using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
 using VRC.Core;
+using VRC.SDK3.Avatars.Components;
 using VRC.SDK3A.Editor;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
@@ -13,6 +14,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class ContinuousAvatarUploader : EditorWindow
     {
         [SerializeField] [ItemCanBeNull] [NotNull] internal AvatarUploadSettingOrGroup[] settingsOrGroups = Array.Empty<AvatarUploadSettingOrGroup>();
+        [SerializeField] private List<MaySceneReference> temporarySettings = new List<MaySceneReference>();
 
         [CanBeNull]
         internal static ContinuousAvatarUploader Instance
@@ -30,7 +32,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [NonSerialized] private AvatarUploadSetting _currentUploadingAvatar;
         [SerializeField] private Vector2 uploadsScroll;
         [SerializeField] private Vector2 errorsScroll;
+        [SerializeField] private Vector2 temporaryAvatarsScroll;
         [SerializeField] private List<UploadErrorInfo> uploadErrors = new List<UploadErrorInfo>();
+        [SerializeField] private bool dragDropFoldout = false;
 
         private UploaderProgressAsset progressAsset;
 
@@ -47,6 +51,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _serialized = new SerializedObject(this);
             _settingsOrGroups = _serialized.FindProperty(nameof(settingsOrGroups));
             _settingsOrGroups.isExpanded = true;
+
+            CleanupTempGroupAsset();
+
             VRCSdkControlPanel.OnSdkPanelEnable += OnSdkPanelEnableDisable;
             VRCSdkControlPanel.OnSdkPanelDisable += OnSdkPanelEnableDisable;
             UploadOrchestrator.OnUploadSingleAvatarStarted += OnUploadSingleAvatarStarted;
@@ -65,6 +72,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             UploadOrchestrator.OnUploadFinished -= OnUploadFinished;
             UploadOrchestrator.OnLoginFailed -= OnLoginFailed;
             UploadOrchestrator.OnRandomException -= OnRandomException;
+            CleanupTempGroupAsset();
         }
 
         private void OnSdkPanelEnableDisable(object sender, EventArgs e) => Repaint();
@@ -90,6 +98,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // if finished unsuccessfully, we should have shown error dialog already
             if (Preferences.ShowDialogWhenUploadFinished && successfully)
                 EditorUtility.DisplayDialog("Continuous Avatar Uploader", "Finished Uploading Avatars!", "OK");
+
+            CleanupTempGroupAsset();
+
             Repaint();
         }
 
@@ -165,6 +176,24 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 new GUIContent("Retry Count", "The number of retries to attempt for each upload. Zero means no retries, so only one attempt will be made."),
                 Preferences.RetryCount);
 
+            EditorGUILayout.Space();
+            dragDropFoldout = EditorGUILayout.Foldout(dragDropFoldout, new GUIContent("Drag & Drop Upload"), true, EditorStyles.foldoutHeader);
+            if (dragDropFoldout)
+            {
+                EditorGUI.indentLevel++;
+
+                EditorGUILayout.Space();
+                HandleDragAndDrop();
+
+                if (temporarySettings.Count > 0)
+                {
+                    EditorGUILayout.Space();
+                    DrawTemporaryAvatarList();
+                }
+                EditorGUI.indentLevel--;
+            }
+            EditorGUILayout.Space();
+
             EditorGUILayout.LabelField("Target Platforms", EditorStyles.boldLabel);
             foreach (var platform in Uploader.GetTargetPlatforms())
             {
@@ -237,8 +266,20 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             {
                 foreach (var previousUploadError in uploadErrors)
                 {
-                    EditorGUILayout.ObjectField("Uploading", previousUploadError.uploadingAvatar,
-                        typeof(AvatarUploadSetting), false);
+                    if (previousUploadError.uploadingAvatar != null)
+                    {
+                        EditorGUILayout.ObjectField("Uploading", previousUploadError.uploadingAvatar,
+                            typeof(AvatarUploadSetting), false);
+                    }
+                    else if (previousUploadError.avatarDescriptor.asset != null
+                                && previousUploadError.avatarDescriptor.GetCachedResolve() is VRCAvatarDescriptor descriptor)
+                    {
+                        EditorGUILayout.ObjectField("Uploading", descriptor, typeof(VRCAvatarDescriptor), false);
+                    }
+                    else
+                    {
+                        EditorGUILayout.LabelField("Avatar", previousUploadError.avatarName);
+                    }
                     EditorGUILayout.EnumPopup("For", previousUploadError.targetPlatform);
                     EditorGUILayout.TextArea(previousUploadError.message);
                 }
@@ -262,7 +303,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             NoPlatformsSelected = 1 << 9,
         }
 
-        private UploadCheckResult CheckUpload() => CheckUploadStatic(GetUploadingAvatars(), Repaint);
+        // We do omit temp since play mode settings is always default
+        private UploadCheckResult CheckUpload() => CheckUploadStatic(GetUploadingAvatars(includeTemp: false), Repaint);
 
         private static UploadCheckResult CheckUploadStatic(IEnumerable<AvatarUploadSetting> avatars, [CanBeNull] Action repaint = null)
         {
@@ -331,14 +373,37 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             return true;
         }
 
-        private IEnumerable<AvatarUploadSetting> GetUploadingAvatars() =>
+        private IEnumerable<AvatarUploadSetting> GetUploadingAvatars(bool includeTemp = true) =>
             settingsOrGroups
                 .Where(x => x)
                 .SelectMany(x => x.Settings)
-                .Where(x => x);
+                .Where(x => x)
+                .Concat(includeTemp ? CreateTemporarySettings() : Array.Empty<AvatarUploadSetting>());
+
+        private List<AvatarUploadSetting> CreateTemporarySettings()
+        {
+            var tempSettings = new List<AvatarUploadSetting>();
+            foreach (var maySceneRef in temporarySettings)
+            {
+                if (maySceneRef.asset == null) continue;
+
+                var tempSetting = CreateTemporarySetting(maySceneRef);
+                if (tempSetting != null)
+                {
+                    tempSettings.Add(tempSetting);
+                }
+            }
+
+            return tempSettings;
+        }
+
+        private void CleanupTempGroupAsset()
+        {
+        }
 
         private void DoStartUpload()
         {
+
             var progress = ScriptableObject.CreateInstance<UploaderProgressAsset>();
             progress.openedScenes = UploadOrchestrator.GetLastOpenedScenes();
             progress.uploadSettings = GetUploadingAvatars().ToArray();
@@ -426,6 +491,122 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             Windows = 1 << (int)TargetPlatform.Windows,
             Android = 1 << (int)TargetPlatform.Android,
             iOS = 1 << (int)TargetPlatform.iOS,
+        }
+
+
+        private void HandleDragAndDrop()
+        {
+            var dropArea = GUILayoutUtility.GetRect(0.0f, 50.0f, GUILayout.ExpandWidth(true));
+            var style = new GUIStyle(GUI.skin.box);
+            style.alignment = TextAnchor.MiddleCenter;
+            style.normal.textColor = EditorGUIUtility.isProSkin ? new Color(0.7f, 0.7f, 0.7f) : new Color(0.3f, 0.3f, 0.3f);
+            GUI.Box(dropArea, "Drag Avatar Prefabs or GameObjects Here", style);
+
+            var currentEvent = Event.current;
+
+            switch (currentEvent.type)
+            {
+                case EventType.DragUpdated:
+                case EventType.DragPerform:
+                    if (!dropArea.Contains(currentEvent.mousePosition))
+                        return;
+
+                    DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
+
+                    if (currentEvent.type != EventType.DragPerform)
+                        break;
+
+                    DragAndDrop.AcceptDrag();
+
+                    foreach (var draggedObject in DragAndDrop.objectReferences)
+                    {
+                        if (!(draggedObject is GameObject go))
+                            continue;
+
+                        var descriptor = go.GetComponent<VRCAvatarDescriptor>();
+                        if (descriptor == null)
+                            continue;
+
+                        var maySceneRef = new MaySceneReference(descriptor);
+                        temporarySettings.Add(maySceneRef);
+                    }
+                    currentEvent.Use();
+                    Repaint();
+                    break;
+            }
+        }
+
+        private AvatarUploadSetting CreateTemporarySetting(MaySceneReference maySceneRef)
+        {
+            var descriptor = maySceneRef.GetCachedResolve() as VRCAvatarDescriptor;
+            if (descriptor == null) return null;
+
+            var tempSetting = ScriptableObject.CreateInstance<AvatarUploadSetting>();
+            tempSetting.name = descriptor.gameObject.name;
+            tempSetting.avatarDescriptor = maySceneRef;
+            tempSetting.avatarName = descriptor.gameObject.name;
+
+            tempSetting.windows.enabled = true;
+            tempSetting.quest.enabled = true;
+            tempSetting.ios.enabled = true;
+
+            tempSetting.hideFlags = HideFlags.DontUnloadUnusedAsset;
+
+            return tempSetting;
+        }
+
+
+        private void DrawTemporaryAvatarList()
+        {
+            EditorGUILayout.LabelField("Avatar List:");
+
+            const float itemHeight = 20f;
+            const int maxVisibleItems = 8;
+
+            if (temporarySettings.Count > maxVisibleItems)
+            {
+                temporaryAvatarsScroll = EditorGUILayout.BeginScrollView(
+                    temporaryAvatarsScroll,
+                    GUILayout.MaxHeight(maxVisibleItems * itemHeight)
+                );
+            }
+
+            for (int i = temporarySettings.Count - 1; i >= 0; i--)
+            {
+                var maySceneRef = temporarySettings[i];
+                if (maySceneRef.asset == null)
+                {
+                    temporarySettings.RemoveAt(i);
+                    continue;
+                }
+
+                var descriptor = maySceneRef.GetCachedResolve() as VRCAvatarDescriptor;
+                var avatarName = descriptor?.gameObject.name ?? "Missing Avatar";
+
+                EditorGUILayout.BeginHorizontal();
+                EditorGUI.BeginChangeCheck();
+                var newDescriptor = EditorGUILayout.ObjectField(avatarName, descriptor, typeof(VRCAvatarDescriptor), true) as VRCAvatarDescriptor;
+                if (EditorGUI.EndChangeCheck() && newDescriptor != null && newDescriptor != descriptor)
+                {
+                    temporarySettings[i] = new MaySceneReference(newDescriptor);
+                }
+
+                if (GUILayout.Button("Remove", GUILayout.Width(60)))
+                {
+                    temporarySettings.RemoveAt(i);
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+
+            if (temporarySettings.Count > maxVisibleItems)
+            {
+                EditorGUILayout.EndScrollView();
+            }
+
+            if (GUILayout.Button("Clear All D&D Avatars"))
+            {
+                temporarySettings.Clear();
+            }
         }
     }
 }

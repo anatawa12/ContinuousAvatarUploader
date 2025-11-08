@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog].
 ## [Unreleased]
 ### Added
 - Allow user to stop building if any build or upload error occurred `#136`
+- Drag & drop avatar upload [`#127`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/127)
 
 ### Changed
 - retry will not re-build avatar when the upload fails `#134`
