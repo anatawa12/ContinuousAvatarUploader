@@ -67,6 +67,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     // User chose not to resume the upload, so we clear the session state and remove the asset.
                     SessionState.EraseBool(UploadInProgressSessionKey);
                     asset.Delete();
+                    return;
                 }
             }
 
@@ -230,60 +231,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 WithTryCatch(() => OnUploadSingleAvatarStarted?.Invoke(asset, avatarToUpload));
 
-                var trialIndex = 0;
-                var errorsInThisTrial = new List<Exception>();
-                do
+                try
                 {
-                    try
+                    await Uploader.UploadSingle(avatarToUpload, builder, asset.retryCount, cancellationToken: CancellationToken);
+                }
+                catch (Exception exception)
+                {
+                    Debug.LogException(exception);
+                    asset.uploadErrors.Add(new UploadErrorInfo
                     {
-                        await Uploader.UploadSingle(avatarToUpload, builder, CancellationToken);
-                        break;
-                    }
-                    catch (OperationCanceledException exception) when (CancellationToken.IsCancellationRequested)
-                    {
-                        Debug.LogException(exception);
-                        errorsInThisTrial.Add(exception);
-                        foreach (var exception1 in errorsInThisTrial)
-                        {
-                            asset.uploadErrors.Add(new UploadErrorInfo
-                            {
-                                uploadingAvatar = avatarToUpload,
-                                avatarName = avatarToUpload.name,
-                                avatarDescriptor = avatarToUpload.avatarDescriptor,
-                                targetPlatform = asset.uploadingTargetPlatform,
-                                message = exception1.ToString()
-                            });
-                        }
-                        asset.Save();
-                        WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, errorsInThisTrial));
-                        break;
-                    }
-                    catch (Exception exception)
-                    {
-                        Debug.LogException(exception);
-                        errorsInThisTrial.Add(exception);
+                        uploadingAvatar = avatarToUpload,
+                        avatarName = avatarToUpload.name,
+                        avatarDescriptor = avatarToUpload.avatarDescriptor,
+                        targetPlatform = asset.uploadingTargetPlatform,
+                        message = exception.ToString()
+                    });
+                    asset.Save();
+                    WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, new List<Exception> { exception }));
 
-                        trialIndex++;
-
-                        if (trialIndex > asset.retryCount || IsUnRetryableException(exception))
-                        {
-                            foreach (var exception1 in errorsInThisTrial)
-                            {
-                                asset.uploadErrors.Add(new UploadErrorInfo
-                                {
-                                    uploadingAvatar = avatarToUpload,
-                                    avatarName = avatarToUpload.name,
-                                    avatarDescriptor = avatarToUpload.avatarDescriptor,
-                                    targetPlatform = asset.uploadingTargetPlatform,
-                                    message = exception1.ToString()
-                                });
-                            }
-                            asset.Save();
-                            WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, errorsInThisTrial));
-                            break;
-                        }
+                    if (!asset.continueUploadOnError)
+                    {
+                        Log("Continue upload other avatars on error is disabled, so we are finishing the upload due to the error.");
+                        FinishUpload(asset, false);
+                        return;
                     }
-                } while (true);
+                }
 
                 Log($"Avatar {asset.uploadingAvatarIndex + 1}/{asset.uploadSettings.Length} uploaded for platform {asset.uploadingTargetPlatform}.");
 

@@ -8,18 +8,28 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- Allow user to stop building if any build or upload error occurred `#136`
 - Drag & drop avatar upload [`#127`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/127)
 
 ### Changed
+- retry will not re-build avatar when the upload fails `#134`
+  - retry building avatar did not retry on build failures before, so now it just retries upload without rebuilding.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+- Unexpected Avatar Not Found error with prefab in setting `#133`
 
 ### Security
 
+## [0.3.11] - 2025-10-11
+### Added
+- Compatibility with VRCSDK 3.9.0 [`#128`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/128)
+
+### Fixed
+- Stop resuming upload when user declines [`#130`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/130)
 ## [0.3.10] - 2025-08-25
 ### Fixed
 - Unable to add elements to Setting Group Group [`#119`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/119)
@@ -194,7 +204,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.11...HEAD
+[0.3.11]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10...v0.3.11
 [0.3.10]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...v0.3.10
 [0.3.9]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...v0.3.9
 [0.3.8]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.7...v0.3.8

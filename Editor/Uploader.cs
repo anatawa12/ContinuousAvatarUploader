@@ -14,12 +14,14 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
+using VRC;
 using VRC.Core;
 using VRC.SDK3.Avatars.Components;
 using VRC.SDK3A.Editor;
 using VRC.SDKBase;
 using VRC.SDKBase.Editor;
 using VRC.SDKBase.Editor.Api;
+using VRC.SDKBase.Editor.Validation;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
@@ -27,6 +29,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 {
     internal static class Uploader
     {
+        private const string AvatarFallbackTag = "author_quest_fallback";
+
         private const string PrefabScenePath = "Assets/com.anatawa12.continuous-avatar-uploader-uploading-prefab.unity";
 
         private static readonly SemaphoreSlim GlobalSemaphore = new SemaphoreSlim(1, 1);
@@ -183,7 +187,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     onStartUpload?.Invoke(avatar, index);
                     try
                     {
-                        await UploadSingle(avatar, builder, cancellationToken);
+                        await UploadSingle(avatar, builder, cancellationToken: cancellationToken);
                     }
                     catch (Exception e)
                     {
@@ -202,6 +206,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         public static async Task UploadSingle(
             AvatarUploadSetting avatar,
             IVRCSdkAvatarBuilderApi builder,
+            int uploadRetryCount = 3,
             CancellationToken cancellationToken = default)
         {
             CheckForPreconditions(builder);
@@ -218,7 +223,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 using (var scope = LoadAvatar(avatar))
                 {
-                    await UploadAvatar(avatar, scope.AvatarDescriptor, playmodeScope, builder,
+                    await UploadAvatar(avatar, 
+                        scope.AvatarDescriptor, 
+                        playmodeScope, 
+                        builder,
+                        uploadRetryCount,
+                        scope.SaveBlueprintId,
                         cancellationToken);
                 }
             }
@@ -228,6 +238,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             VRCAvatarDescriptor avatarDescriptor,
             PreventEnteringPlayModeScope playmodeScope,
             IVRCSdkAvatarBuilderApi builder,
+            int uploadRetryCount = 3,
+            [CanBeNull] Action<string> saveBlueprintId = null,
             CancellationToken cancellationToken = default)
         {
             if (!avatarDescriptor)
@@ -241,8 +253,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var platformInfo = avatar.GetCurrentPlatformInfo();
 
             // prepare data for upload
-            var pipelineManager = PreparePipelineManager(avatarDescriptor.gameObject);
-            var (vrcAvatar, uploadingNewAvatar) = await PrepareVRCAvatar(pipelineManager, cancellationToken);
+            var (vrcAvatar, uploadingNewAvatar) = await PrepareVRCAvatar(avatarDescriptor.gameObject, saveBlueprintId, cancellationToken);
+            var pipelineManager = avatarDescriptor.GetComponent<PipelineManager>();
+
+            if (APIUser.CurrentUser == null || vrcAvatar.AuthorId != null && vrcAvatar.AuthorId != APIUser.CurrentUser?.id)
+                throw new OwnershipException("Avatar's current ID belongs to a different user, assign a different ID to upload as new avatar");
 
             // if picture is needed, take and use for upload
             string picturePath = null;
@@ -320,37 +335,63 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             // build avatar main process
+            string bundlePath;
             using (new SetBlueprintIdEveryFrame(pipelineManager, pipelineManager.blueprintId))
             {
                 await AddCopyrightAgreement(pipelineManager.blueprintId);
-                await builder.BuildAndUpload(avatarDescriptor.gameObject, vrcAvatar,
-                    thumbnailPath: picturePath,
-                    cancellationToken: cancellationToken);
+                bundlePath = await builder.Build(avatarDescriptor.gameObject);
+
+                ValidateBuiltBundleSize(bundlePath);
             }
 
             // get uploaded avatar info
             vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true,
                 cancellationToken: cancellationToken);
 
-            // upload avatar image if not uploaded.
-            // When https://feedback.vrchat.com/open-beta/p/beta-sdk-330-beta1-lack-of-ability-to-update-description-from-code
-            // is fixed, this process may not required
-            if (platformInfo.updateImage && !uploadingNewAvatar)
+            vrcAvatar = await UpdateAvatarFallbackTagIfNeeded(pipelineManager, vrcAvatar, cancellationToken: cancellationToken);
+
+            // VRCSDK uses CreateNewAvatar to create new avatar, and UpdateAvatarImage/Bundle to update existing avatar.
+            // However, UpdateAvatarImage/Bundle also works for new avatar so we use them always.
+            // This is simpler and has finer progress reporting.
+
+            if (picturePath != null)
             {
-                try
+                await UploadWithRetry(async () =>
                 {
-                    await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
+                    vrcAvatar = await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
                         cancellationToken: cancellationToken);
-                }
-                catch (UploadException e)
+                });
+            }
+
+            await UploadWithRetry(async () =>
+            {
+                vrcAvatar = await VRCApi.UpdateAvatarBundle(vrcAvatar.ID, vrcAvatar, bundlePath,
+                    cancellationToken: cancellationToken);
+            });
+
+            async Task UploadWithRetry(Func<Task> uploadAction)
+            {
+                var remainingRetries = uploadRetryCount;
+                for (;;)
                 {
-                    if (e.Message.Contains("This file was already uploaded"))
+                    try
                     {
-                        Debug.Log("Uploading image skipped: image already uploaded");
+                        await uploadAction();
+                        return;
                     }
-                    else
+                    catch (UploadException e)
                     {
-                        throw;
+                        if (e.Message == "This file was already uploaded")
+                        {
+                            Debug.Log("Uploading skipped: already uploaded");
+                        }
+
+                        if (remainingRetries == 0) throw;
+                        remainingRetries--;
+
+                        var currentTry = uploadRetryCount - remainingRetries;
+                        Debug.LogWarning(
+                            $"Uploading failed with exception, retrying... ({currentTry}/{uploadRetryCount}): {e}");
                     }
                 }
             }
@@ -374,60 +415,95 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
-        private static async Task<(VRCAvatar, bool isNewAvatar)> PrepareVRCAvatar(PipelineManager pipelineManager,
+        private static async Task<(VRCAvatar, bool isNewAvatar)> PrepareVRCAvatar(GameObject gameObject,
+            Action<string> saveBlueprintId = null,
             CancellationToken cancellationToken = default)
         {
-            VRCAvatar vrcAvatar = default;
+            var pipelineManager = gameObject.GetComponent<PipelineManager>();
+            if (!pipelineManager)
+                pipelineManager = gameObject.AddComponent<PipelineManager>();
+
+            VRCAvatar vrcAvatar;
             bool isNewAvatar;
 
-            try
+            if (string.IsNullOrEmpty(pipelineManager.blueprintId))
             {
-                vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, true, cancellationToken);
-            }
-            catch (ApiErrorException ex)
-            {
-                if (ex.StatusCode != HttpStatusCode.NotFound)
-                    throw new Exception("Unknown error");
-            }
-
-
-            if (string.IsNullOrEmpty(vrcAvatar.ID))
-            {
+                // The blueprint id is not assigned yet. Reserving new blueprint id or simply assigning one.
+#if CAU_VRCSDK_BASE_3_9_0
+                vrcAvatar = await VRCApi.CreateAvatarRecord(CreateNewAvatarInfo(), cancellationToken: cancellationToken);
+                if (string.IsNullOrEmpty(vrcAvatar.ID)) throw new Exception("Failed to reserve an avatar ID");
+                pipelineManager.blueprintId = vrcAvatar.ID;
+#else
+                // pipelineManager.AssignId() doesn't mark pipeline manager dirty
+                pipelineManager.AssignId();
+                vrcAvatar = CreateNewAvatarInfo();
+#endif
+                saveBlueprintId?.Invoke(pipelineManager.blueprintId);
                 isNewAvatar = true;
-                vrcAvatar = new VRCAvatar
-                {
-                    Name = pipelineManager.gameObject.name,
-                    Description = "",
-                    Tags = new List<string>(),
-                    ReleaseStatus = "private",
-                };
             }
             else
             {
-                if (APIUser.CurrentUser == null || vrcAvatar.AuthorId != APIUser.CurrentUser?.id)
-                    throw new Exception("Uploading other user avatar.");
-                isNewAvatar = false;
+                // when blueprint id is already assigned, try to get avatar info
+                try
+                {
+                    vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, true, cancellationToken);
+                }
+                catch (ApiErrorException ex)
+                {
+                    if (ex.StatusCode != HttpStatusCode.NotFound)
+                        throw new Exception("Unknown error", ex);
+                    vrcAvatar = default;
+                }
+
+
+                if (string.IsNullOrEmpty(vrcAvatar.ID))
+                {
+                    isNewAvatar = true;
+                    vrcAvatar = CreateNewAvatarInfo();
+                    Debug.LogWarning("We found avatar with blueprint id set but not uploaded. This is not supported by VRCSDK since 3.9.0.");
+                }
+                else
+                {
+                    if (APIUser.CurrentUser == null || vrcAvatar.AuthorId != APIUser.CurrentUser?.id)
+                        throw new Exception("Uploading other user avatar.");
+#if CAU_VRCSDK_BASE_3_9_0
+                    isNewAvatar = vrcAvatar.PendingUpload;
+#else
+                    isNewAvatar = false;
+#endif
+                }
             }
 
             return (vrcAvatar, isNewAvatar);
+
+            VRCAvatar CreateNewAvatarInfo() => new()
+            {
+                Name = pipelineManager.gameObject.name,
+                Description = "",
+                Tags = new List<string>(),
+                ReleaseStatus = "private",
+            };
         }
 
         interface IUploadAvatarScope : IDisposable
         {
             [CanBeNull] VRCAvatarDescriptor AvatarDescriptor { get; }
+
+            void SaveBlueprintId(string blueprintId);
         }
 
         class AssetUploadAvatarScope : IUploadAvatarScope
         {
-            public VRCAvatarDescriptor AvatarDescriptor { get; }
+            private VRCAvatarDescriptor _prefabAvatarDescriptor;
+            public VRCAvatarDescriptor AvatarDescriptor { get; private set; }
 
             public AssetUploadAvatarScope(AvatarUploadSetting avatar)
             {
                 var avatarDescriptor = avatar.avatarDescriptor.asset as VRCAvatarDescriptor;
+                // The AvatarDescriptor (prefab) instance can be unloaded, while the reference exists
+                if (avatarDescriptor is not null && !avatarDescriptor)
+                    avatarDescriptor = EditorUtility.InstanceIDToObject(avatarDescriptor.GetInstanceID()) as VRCAvatarDescriptor;
                 if (!avatarDescriptor) return;
-
-                // PreparePipelineManager here since we have to save changes to prefab file
-                PreparePipelineManager(avatarDescriptor.gameObject);
 
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
                 var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
@@ -435,6 +511,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 newGameObject.SetActive(true);
                 AvatarDescriptor = newGameObject.GetComponent<VRCAvatarDescriptor>();
                 EditorSceneManager.SaveScene(scene, PrefabScenePath);
+            }
+
+            public void SaveBlueprintId(string blueprintId)
+            {
+                var gameObject = _prefabAvatarDescriptor.gameObject;
+                var pipelineManager = gameObject.GetComponent<PipelineManager>();
+                if (!pipelineManager)
+                    pipelineManager = gameObject.AddComponent<PipelineManager>();
+                pipelineManager.blueprintId = blueprintId;
+                EditorUtility.SetDirty(pipelineManager);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(pipelineManager);
             }
 
             public void Dispose()
@@ -472,6 +559,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
             }
 
+            public void SaveBlueprintId(string _)
+            {
+                var pipelineManager = AvatarDescriptor.GetComponent<PipelineManager>();
+                EditorUtility.SetDirty(pipelineManager);
+                PrefabUtility.RecordPrefabInstancePropertyModifications(pipelineManager);
+                if (pipelineManager.gameObject.scene.IsValid())
+                    EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
+            }
+
             public void Dispose()
             {
                 if (AvatarDescriptor != null)
@@ -491,25 +587,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             avatar.avatarDescriptor.IsAssetReference()
                 ? (IUploadAvatarScope)new AssetUploadAvatarScope(avatar)
                 : new InSceneAvatarScope(avatar);
-
-        private static PipelineManager PreparePipelineManager(GameObject gameObject)
-        {
-            var pipelineManager = gameObject.GetComponent<PipelineManager>();
-            if (!pipelineManager)
-                pipelineManager = gameObject.AddComponent<PipelineManager>();
-
-            if (string.IsNullOrEmpty(pipelineManager.blueprintId))
-            {
-                // pipelineManager.AssignId() doesn't mark pipeline manager dirty
-                pipelineManager.AssignId();
-                EditorUtility.SetDirty(pipelineManager);
-                PrefabUtility.RecordPrefabInstancePropertyModifications(pipelineManager);
-                if (pipelineManager.gameObject.scene.IsValid())
-                    EditorSceneManager.SaveScene(pipelineManager.gameObject.scene);
-            }
-
-            return pipelineManager;
-        }
 
         private static string TakePicture(VRC_AvatarDescriptor cachedAvatar, int width, int height)
         {
@@ -677,6 +754,45 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 #else
         private static Task AddCopyrightAgreement(string blueprint) => Task.CompletedTask;
 #endif
+
+        private static void ValidateBuiltBundleSize(string bundlePath)
+        {
+            var isMobbile = ValidationEditorHelpers.IsMobilePlatform();
+
+            if (ValidationEditorHelpers.CheckIfAssetBundleFileTooLarge(ContentType.Avatar, bundlePath, out var fileSize, isMobbile))
+            {
+                var limit = ValidationHelpers.GetAssetBundleSizeLimit(ContentType.Avatar, isMobbile);
+                throw new ValidationException($"Avatar download size is too large for the target platform. " +
+                                              $"{ValidationHelpers.FormatFileSize(fileSize)}({fileSize} bytes) " +
+                                              $"> {ValidationHelpers.FormatFileSize(limit)}({limit} bytes)");
+            }
+
+            if (ValidationEditorHelpers.CheckIfUncompressedAssetBundleFileTooLarge(ContentType.Avatar, out var uncompressedSize, isMobbile))
+            {
+                var limit = ValidationHelpers.GetAssetBundleSizeLimit(ContentType.Avatar, isMobbile, false);
+                throw new ValidationException($"Avatar uncompressed size is too large for the target platform. " +
+                                              $"{ValidationHelpers.FormatFileSize(uncompressedSize)} ({uncompressedSize} bytes) " +
+                                              $"> {ValidationHelpers.FormatFileSize(limit)}({limit} bytes)");
+            }
+        }
+
+        private static async Task<VRCAvatar> UpdateAvatarFallbackTagIfNeeded(
+            PipelineManager pipelineManager,
+            VRCAvatar vrcAvatar,
+            CancellationToken cancellationToken = default)
+        {
+            // Update fallback tag
+            if (vrcAvatar.Tags?.Contains(AvatarFallbackTag) ?? false)
+            {
+                if (pipelineManager.fallbackStatus is PipelineManager.FallbackStatus.InvalidPerformance or PipelineManager.FallbackStatus.InvalidRig)
+                {
+                    vrcAvatar.Tags = vrcAvatar.Tags.Where(t => t != AvatarFallbackTag).ToList();
+                    vrcAvatar = await VRCApi.UpdateAvatarInfo(pipelineManager.blueprintId, vrcAvatar, cancellationToken: cancellationToken);
+                }
+            }
+
+            return vrcAvatar;
+        }
 
         /// <summary>
         /// This class sets the blueprintId every frame until disposed.
