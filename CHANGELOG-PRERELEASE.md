@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog].
 
 ### Fixed
 - Unexpected Avatar Not Found error with prefab in setting `#133`
+- Error for new avatars with prefab asset `#138`
 
 ### Security
 
