@@ -504,6 +504,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (avatarDescriptor is not null && !avatarDescriptor)
                     avatarDescriptor = EditorUtility.InstanceIDToObject(avatarDescriptor.GetInstanceID()) as VRCAvatarDescriptor;
                 if (!avatarDescriptor) return;
+                _prefabAvatarDescriptor = avatarDescriptor;
 
                 var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects);
                 var newGameObject = Object.Instantiate(avatarDescriptor.gameObject);
