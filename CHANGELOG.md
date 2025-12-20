@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog].
 ### Added
 - Allow user to stop building if any build or upload error occurred `#136`
 - Drag & drop avatar upload [`#127`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/127)
+- Compatibility with VRCSDK 3.10.x `#143`
 
 ### Changed
 - retry will not re-build avatar when the upload fails `#134`
