@@ -8,23 +8,30 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
-- Allow user to stop building if any build or upload error occurred `#136`
-- Drag & drop avatar upload [`#127`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/127)
-- Compatibility with VRCSDK 3.10.x `#143`
 
 ### Changed
-- retry will not re-build avatar when the upload fails `#134`
-  - retry building avatar did not retry on build failures before, so now it just retries upload without rebuilding.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
-- Unexpected Avatar Not Found error with prefab in setting `#133`
-- Error for new avatars with prefab asset `#138`
 
 ### Security
+
+## [0.3.12] - 2025-12-20
+### Added
+- Allow user to stop building if any build or upload error occurred [`#136`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/136)
+- Drag & drop avatar upload [`#127`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/127)
+- Compatibility with VRCSDK 3.10.x [`#143`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/143)
+
+### Changed
+- retry will not re-build avatar when the upload fails [`#134`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/134)
+  - retry building avatar did not retry on build failures before, so now it just retries upload without rebuilding.
+
+### Fixed
+- Unexpected Avatar Not Found error with prefab in setting [`#133`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/133)
+- Error for new avatars with prefab asset [`#138`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/138)
 
 ## [0.3.11] - 2025-10-11
 ### Added
@@ -206,7 +213,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.11...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.12...HEAD
+[0.3.12]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.11...v0.3.12
 [0.3.11]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.10...v0.3.11
 [0.3.10]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.9...v0.3.10
 [0.3.9]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.8...v0.3.9
