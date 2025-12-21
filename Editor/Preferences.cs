@@ -58,7 +58,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public static int RestartEditorAfterUploads
         {
-            get => EditorPrefs.GetInt(EditorPrefsPrefix + "restart-editor-after-uploads", 0);
+            get => EditorPrefs.GetInt(EditorPrefsPrefix + "restart-editor-after-uploads", 1);
             set => EditorPrefs.SetInt(EditorPrefsPrefix + "restart-editor-after-uploads", value);
         }
 
