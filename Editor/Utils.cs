@@ -81,6 +81,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 }
             }
         }
+
+        public static void RestartEditor()
+        {
+            EditorApplication.OpenProject(Environment.CurrentDirectory);
+        }
     }
 
     class PreventEnteringPlayModeScope : IDisposable

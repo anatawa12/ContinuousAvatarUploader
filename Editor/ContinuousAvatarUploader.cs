@@ -35,6 +35,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         [SerializeField] private Vector2 temporaryAvatarsScroll;
         [SerializeField] private List<UploadErrorInfo> uploadErrors = new List<UploadErrorInfo>();
         [SerializeField] private bool dragDropFoldout = false;
+        [SerializeField] private bool restartOptionsFoldout = false;
 
         private UploaderProgressAsset progressAsset;
 
@@ -175,6 +176,38 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             Preferences.RetryCount = EditorGUILayout.IntField(
                 new GUIContent("Retry Count", "The number of retries to attempt for each upload. Zero means no retries, so only one attempt will be made."),
                 Preferences.RetryCount);
+
+            restartOptionsFoldout = EditorGUILayout.Foldout(restartOptionsFoldout, "Restart Options", true, EditorStyles.foldoutHeader);
+            if (restartOptionsFoldout)
+            {
+                EditorGUI.indentLevel++;
+                var initialLabelWidth = EditorGUIUtility.labelWidth;
+                EditorGUIUtility.labelWidth = 200;
+
+                EditorGUILayout.HelpBox(
+                    "Auto restart feature only tested on Windows and may not work correctly on other platforms.",
+                    MessageType.Warning);
+
+                Preferences.RestartBeforeFirstUpload = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Restart Editor before first upload",
+                        "If this is enabled, CAU will restart the editor before first upload to reduce memory usage."),
+                    Preferences.RestartBeforeFirstUpload);
+                Preferences.IsRestartEditorAfterUploadsEnabled = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Restart Editor during upload",
+                        "If this is enabled, CAU will restart the editor during upload to reduce memory usage."),
+                    Preferences.IsRestartEditorAfterUploadsEnabled);
+                if (Preferences.IsRestartEditorAfterUploadsEnabled)
+                {
+                    var restartEditorAfterUploads = EditorGUILayout.IntField(
+                        new GUIContent("Restart Editor After Uploads", "The number of uploads after which the editor will be restarted."),
+                        Preferences.RestartEditorAfterUploads);
+                    if (restartEditorAfterUploads > 0)
+                        Preferences.RestartEditorAfterUploads = restartEditorAfterUploads;
+                }
+
+                EditorGUIUtility.labelWidth = initialLabelWidth;
+                EditorGUI.indentLevel--;
+            }
 
             EditorGUILayout.Space();
             dragDropFoldout = EditorGUILayout.Foldout(dragDropFoldout, new GUIContent("Drag & Drop Upload"), true, EditorStyles.foldoutHeader);
@@ -412,6 +445,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             progress.rollbackPlatform = Preferences.RollbackBuildPlatform;
             progress.retryCount = Preferences.RetryCount;
             progress.continueUploadOnError = Preferences.ContinueUploadOnError;
+            progress.restartBeforeFirstUpload = Preferences.RestartBeforeFirstUpload;
+            progress.restartDuringUpload = Preferences.IsRestartEditorAfterUploadsEnabled;
+            progress.restartAfterUploads = Preferences.RestartEditorAfterUploads;
             UploadOrchestrator.StartUpload(progress);
         }
 

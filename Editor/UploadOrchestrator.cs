@@ -48,8 +48,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 return;
             }
 
-            var isUploading = SessionState.GetBool(UploadInProgressSessionKey, false);
-            if (!isUploading)
+            var isUploadingStateExist = SessionState.GetBool(UploadInProgressSessionKey, false);
+            if (!isUploadingStateExist && !asset.isRestartingEditor)
             {
                 // This no session state means that the last upload was not finished properly.
                 // (e.g. Unity Editor crashed or was closed while uploading)
@@ -70,6 +70,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     return;
                 }
             }
+
+            asset.isRestartingEditor = false;
+            asset.Save();
 
             Log("Resuming upload from progress asset.");
 
@@ -121,6 +124,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             asset.Save();
+
+            if (asset.restartBeforeFirstUpload)
+            {
+                Log("Restarting editor before first upload.");
+                RestartEditor(asset);
+                return;
+            }
 
             SessionState.SetBool(UploadInProgressSessionKey, true);
             // Start the upload process.
@@ -264,6 +274,15 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 // After uploading, we increment the index
                 asset.uploadingAvatarIndex++;
                 asset.Save();
+
+                if (asset.restartDuringUpload &&
+                    asset.restartAfterUploads > 0 &&
+                    asset.uploadingAvatarIndex % asset.restartAfterUploads == 0)
+                {
+                    Log("Restarting editor as configured restart after " + asset.restartAfterUploads + " uploads.");
+                    RestartEditor(asset);
+                    return;
+                }
             }
             catch (Exception e)
             {
@@ -286,6 +305,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             // Continue uploading the next avatar.
             await UploadNextAvatar(asset);
+        }
+
+        private static void RestartEditor(UploaderProgressAsset asset)
+        {
+            asset.isRestartingEditor = true;
+            asset.Save();
+            Utils.RestartEditor();
         }
 
         private static bool IsUnRetryableException(Exception exception) => exception is OwnershipException or BuilderException;
