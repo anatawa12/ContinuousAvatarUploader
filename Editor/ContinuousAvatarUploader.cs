@@ -187,6 +187,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 EditorGUILayout.HelpBox(
                     "Auto restart feature only tested on Windows and may not work correctly on other platforms.",
                     MessageType.Warning);
+                EditorGUILayout.HelpBox(
+                    "You need to ensure that your editor window is foreground and focus at least once after the editor restart.",
+                    MessageType.Warning);
 
                 Preferences.RestartBeforeFirstUpload = EditorGUILayout.ToggleLeft(
                     new GUIContent("Restart Editor before first upload",
