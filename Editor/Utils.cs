@@ -84,7 +84,21 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         public static void RestartEditor()
         {
-            EditorApplication.OpenProject(Environment.CurrentDirectory);
+            var args = Environment.GetCommandLineArgs().ToList();
+            var projectPathArgIndex = args.IndexOf("-projectPath");
+            if (projectPathArgIndex != -1)
+            {
+                if (projectPathArgIndex + 1 > args.Count)
+                {
+                    args.RemoveRange(projectPathArgIndex, 2);
+                }
+                else
+                {
+                    args.RemoveAt(projectPathArgIndex);
+                }
+            }
+
+            EditorApplication.OpenProject(Environment.CurrentDirectory, args.ToArray());
         }
     }
 
