@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog].
 ## [Unreleased]
 ### Added
 
+- Allow user automatically restart editor during uploading. [`#144`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/144)
+  - Restart editor before first upload.
+  - Restart editor after configured numbers of avatars was upload.
+
 ### Changed
 
 ### Deprecated

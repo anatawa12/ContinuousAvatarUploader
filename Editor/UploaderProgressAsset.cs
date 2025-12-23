@@ -49,6 +49,19 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         /// </summary>
         public bool continueUploadOnError;
 
+        /// <summary>
+        /// Whether to restart the editor before starting the first upload.
+        /// </summary>
+        public bool restartBeforeFirstUpload;
+        /// <summary>
+        /// Whether to restart the editor during the upload process.
+        /// </summary>
+        public bool restartDuringUpload;
+        /// <summary>
+        /// How many uploads have to be done before restarting the editor. Must be at least 1.
+        /// </summary>
+        public int restartAfterUploads;
+
         // Mutable fields that describe the current progress of the upload
         /// <summary>
         /// The index of the current upload is in progress.
@@ -71,6 +84,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         /// The list of errors that occurred during the upload.
         /// </summary>
         public List<UploadErrorInfo> uploadErrors = new();
+        /// <summary>
+        /// Whether the editor is currently restarting.
+        /// </summary>
+        public bool isRestartingEditor = false;
 
         private bool isDeleting = false;
         private static bool isReloading = false;
