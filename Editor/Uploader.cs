@@ -354,20 +354,40 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             // However, UpdateAvatarImage/Bundle also works for new avatar so we use them always.
             // This is simpler and has finer progress reporting.
 
-            if (picturePath != null)
+            // Invoke OnSdkUploadStart event for VRCFury compatibility
+            InvokeSdkEvent(builder, "OnSdkUploadStart", EventArgs.Empty);
+
+            try
             {
+                if (picturePath != null)
+                {
+                    await UploadWithRetry(async () =>
+                    {
+                        vrcAvatar = await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
+                            cancellationToken: cancellationToken);
+                    });
+                }
+
                 await UploadWithRetry(async () =>
                 {
-                    vrcAvatar = await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
+                    vrcAvatar = await VRCApi.UpdateAvatarBundle(vrcAvatar.ID, vrcAvatar, bundlePath,
                         cancellationToken: cancellationToken);
                 });
-            }
 
-            await UploadWithRetry(async () =>
+                // Invoke OnSdkUploadSuccess event for VRCFury compatibility
+                InvokeSdkEvent(builder, "OnSdkUploadSuccess", pipelineManager.blueprintId);
+            }
+            catch (Exception ex)
             {
-                vrcAvatar = await VRCApi.UpdateAvatarBundle(vrcAvatar.ID, vrcAvatar, bundlePath,
-                    cancellationToken: cancellationToken);
-            });
+                // Invoke OnSdkUploadError event for VRCFury compatibility
+                InvokeSdkEvent(builder, "OnSdkUploadError", ex.Message);
+                throw;
+            }
+            finally
+            {
+                // Invoke OnSdkUploadFinish event for VRCFury compatibility
+                InvokeSdkEvent(builder, "OnSdkUploadFinish", "Avatar upload finished");
+            }
 
             async Task UploadWithRetry(Func<Task> uploadAction)
             {
@@ -793,6 +813,55 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             return vrcAvatar;
+        }
+
+        /// <summary>
+        /// Invokes SDK event handlers via reflection for VRCFury compatibility.
+        /// Events are on IVRCSdkBuilderApi and implemented as private fields in the implementor class.
+        /// Exceptions from events and reflection errors are caught and logged but do not suspend the upload process.
+        /// </summary>
+        /// <param name="builder">The IVRCSdkBuilderApi instance (used as the sender)</param>
+        /// <param name="eventName">Name of the event to invoke (e.g., "OnSdkUploadStart")</param>
+        /// <param name="eventArgs">Arguments to pass to the event handler</param>
+        private static void InvokeSdkEvent(IVRCSdkAvatarBuilderApi builder, string eventName, object eventArgs)
+        {
+            try
+            {
+                // Get the concrete type of the builder implementation
+                var builderType = builder.GetType();
+                
+                // Try to find the event field (events are backed by private fields)
+                var eventField = builderType.GetField(eventName, 
+                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+                
+                if (eventField == null)
+                {
+                    // Event field not found - this is expected if VRCFury is not present or SDK version doesn't have these events
+                    Debug.Log($"[CAU] SDK event '{eventName}' not found on builder type {builderType.Name}. " +
+                              "This is expected if VRCFury is not installed or using an older SDK version.");
+                    return;
+                }
+                
+                // Get the delegate (event handler) from the field
+                var eventDelegate = eventField.GetValue(builder) as Delegate;
+                
+                if (eventDelegate == null)
+                {
+                    // No subscribers to this event
+                    Debug.Log($"[CAU] SDK event '{eventName}' has no subscribers.");
+                    return;
+                }
+                
+                // Invoke the event with the builder as sender and eventArgs as the parameter
+                Debug.Log($"[CAU] Invoking SDK event '{eventName}' with args: {eventArgs}");
+                eventDelegate.DynamicInvoke(builder, eventArgs);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception but don't let it break the upload process
+                Debug.LogWarning($"[CAU] Exception while invoking SDK event '{eventName}': {ex.Message}");
+                Debug.LogException(ex);
+            }
         }
 
         /// <summary>
