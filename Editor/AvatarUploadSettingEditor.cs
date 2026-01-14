@@ -6,9 +6,11 @@ using JetBrains.Annotations;
 using UnityEditor;
 using UnityEditor.Graphs;
 using UnityEditor.SceneManagement;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
 using Object = UnityEngine.Object;
 
@@ -40,6 +42,80 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _windows = serializedObject.FindProperty(nameof(AvatarUploadSetting.windows));
             _quest = serializedObject.FindProperty(nameof(AvatarUploadSetting.quest));
             _ios = serializedObject.FindProperty(nameof(AvatarUploadSetting.ios));
+        }
+
+        public override VisualElement CreateInspectorGUI()
+        {
+            var root = new VisualElement();
+
+            // Create inspector using IMGUI container for now to preserve all functionality
+            root.Add(new IMGUIContainer(() =>
+            {
+                serializedObject.Update();
+                var avatars = targets.Cast<AvatarUploadSetting>().ToArray();
+
+                if (serializedObject.isEditingMultipleObjects)
+                {
+                    MultipleAvatarDescriptor(avatars);
+                }
+                else
+                {
+                    SingleAvatarDescriptor(_avatarDescriptor);
+                }
+
+                if (!serializedObject.isEditingMultipleObjects)
+                {
+                    var avatar = avatars.First();
+                    if (!avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled)
+                        EditorGUILayout.HelpBox("This avatar has all platforms disabled. This is fine if intentional.", MessageType.Warning);
+                }
+                
+                {
+                    var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
+                    using (new EditorGUI.DisabledGroupScope(!enabledAll))
+                        ContinuousAvatarUploader.UploadButtonGui(avatars, Repaint);
+                }
+
+                DrawPlatformSpecificInfo(Labels.PCWindows, _windows);
+                DrawPlatformSpecificInfo(Labels.QuestAndroid, _quest);
+                DrawPlatformSpecificInfo(Labels.IOS, _ios);
+
+                if (serializedObject.isEditingMultipleObjects)
+                {
+                    EditorGUILayout.LabelField("Editing Camera Position is not supported in multi-editing");
+                }
+                else
+                {
+                    EditorGUI.BeginDisabledGroup(
+                        !_cachedAvatar
+                        // previewing other avatar
+                        || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
+                    );
+                    if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
+                    {
+                        _previewCameraManager.AddEditor(this);
+                        _previewCameraManager.DrawPreview();
+                        if (IndentedButton("Finish Setting Camera Position"))
+                        {
+                            _previewCameraManager?.Finish();
+                            _previewCameraManager = null;
+                        }
+                    }
+                    else
+                    {
+                        if (IndentedButton("Configure Camera Position"))
+                        {
+                            _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar!);
+                        }
+                    }
+
+                    EditorGUI.EndDisabledGroup();
+                }
+
+                serializedObject.ApplyModifiedProperties();
+            }));
+
+            return root;
         }
 
         private void MultipleAvatarDescriptor(AvatarUploadSetting[] avatars)
@@ -115,72 +191,6 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 if (GUILayout.Button("Change Avatar"))
                     _settingAvatar = true;
             }
-        }
-
-        public override void OnInspectorGUI()
-        {
-            serializedObject.Update();
-            var avatars = targets.Cast<AvatarUploadSetting>().ToArray();
-
-            if (serializedObject.isEditingMultipleObjects)
-            {
-                MultipleAvatarDescriptor(avatars);
-            }
-            else
-            {
-                SingleAvatarDescriptor(_avatarDescriptor);
-            }
-
-            if (!serializedObject.isEditingMultipleObjects)
-            {
-                var avatar = avatars.First();
-                if (!avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled)
-                    EditorGUILayout.HelpBox("This avatar has all platforms disabled. This is fine if intentional.", MessageType.Warning);
-            }
-            
-            {
-                var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
-                using (new EditorGUI.DisabledGroupScope(!enabledAll))
-                    ContinuousAvatarUploader.UploadButtonGui(avatars, Repaint);
-            }
-
-            DrawPlatformSpecificInfo(Labels.PCWindows, _windows);
-            DrawPlatformSpecificInfo(Labels.QuestAndroid, _quest);
-            DrawPlatformSpecificInfo(Labels.IOS, _ios);
-
-            if (serializedObject.isEditingMultipleObjects)
-            {
-                EditorGUILayout.LabelField("Editing Camera Position is not supported in multi-editing");
-            }
-            else
-            {
-                EditorGUI.BeginDisabledGroup(
-                    !_cachedAvatar
-                    // previewing other avatar
-                    || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
-                );
-                if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
-                {
-                    _previewCameraManager.AddEditor(this);
-                    _previewCameraManager.DrawPreview();
-                    if (IndentedButton("Finish Setting Camera Position"))
-                    {
-                        _previewCameraManager?.Finish();
-                        _previewCameraManager = null;
-                    }
-                }
-                else
-                {
-                    if (IndentedButton("Configure Camera Position"))
-                    {
-                        _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar!);
-                    }
-                }
-
-                EditorGUI.EndDisabledGroup();
-            }
-
-            serializedObject.ApplyModifiedProperties();
         }
 
         private void OnDisable()
