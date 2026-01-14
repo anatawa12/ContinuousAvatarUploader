@@ -79,17 +79,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             root.Add(avatarSection);
 
             // Platform settings - use simple PropertyFields for automatic UIElements rendering
-            var windowsField = new PropertyField(_windows);
-            windowsField.Bind(serializedObject);
-            root.Add(windowsField);
-
-            var questField = new PropertyField(_quest);
-            questField.Bind(serializedObject);
-            root.Add(questField);
-
-            var iosField = new PropertyField(_ios);
-            iosField.Bind(serializedObject);
-            root.Add(iosField);
+            AddPropertyField(root, _windows);
+            AddPropertyField(root, _quest);
+            AddPropertyField(root, _ios);
 
             // Camera configuration - keep IMGUI for preview functionality
             var cameraSection = new IMGUIContainer(() =>
@@ -131,6 +123,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             root.Add(cameraSection);
 
             return root;
+        }
+
+        private void AddPropertyField(VisualElement root, SerializedProperty property)
+        {
+            var field = new PropertyField(property);
+            field.Bind(serializedObject);
+            root.Add(field);
         }
 
         private void MultipleAvatarDescriptor(AvatarUploadSetting[] avatars)
