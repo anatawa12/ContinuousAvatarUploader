@@ -819,6 +819,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         /// Invokes SDK event handlers via reflection for VRCFury compatibility.
         /// Events are on IVRCSdkBuilderApi and implemented as private fields in the implementor class.
         /// Exceptions from events and reflection errors are caught and logged but do not suspend the upload process.
+        ///
+        /// See <see href="https://github.com/anatawa12/ContinuousAvatarUploader/issues/145">#145</see> for discussion.
         /// </summary>
         /// <param name="builder">The IVRCSdkBuilderApi instance (used as the sender)</param>
         /// <param name="eventName">Name of the event to invoke (e.g., "OnSdkUploadStart")</param>
