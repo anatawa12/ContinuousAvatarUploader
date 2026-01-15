@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog].
 
 ## [Unreleased]
 ### Added
+- Calling `OnSdkUpload*` callbacks for compatibility with VRCFury `#145`
+  - This is not permanent change, but we can call them for now.
+  - We may remove this in the future when we improve build algorithm.
 
 ### Changed
 
