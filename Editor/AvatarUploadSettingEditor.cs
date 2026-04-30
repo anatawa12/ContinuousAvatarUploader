@@ -6,9 +6,11 @@ using JetBrains.Annotations;
 using UnityEditor;
 using UnityEditor.Graphs;
 using UnityEditor.SceneManagement;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.SceneManagement;
+using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
 using Object = UnityEngine.Object;
 
@@ -40,6 +42,94 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             _windows = serializedObject.FindProperty(nameof(AvatarUploadSetting.windows));
             _quest = serializedObject.FindProperty(nameof(AvatarUploadSetting.quest));
             _ios = serializedObject.FindProperty(nameof(AvatarUploadSetting.ios));
+        }
+
+        public override VisualElement CreateInspectorGUI()
+        {
+            var root = new VisualElement();
+
+            // Avatar descriptor and upload button section - keep IMGUI for complex interactions
+            var avatarSection = new IMGUIContainer(() =>
+            {
+                serializedObject.Update();
+                var avatars = targets.Cast<AvatarUploadSetting>().ToArray();
+
+                if (serializedObject.isEditingMultipleObjects)
+                {
+                    MultipleAvatarDescriptor(avatars);
+                }
+                else
+                {
+                    SingleAvatarDescriptor(_avatarDescriptor);
+                }
+
+                if (!serializedObject.isEditingMultipleObjects)
+                {
+                    var avatar = avatars.First();
+                    if (!avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled)
+                        EditorGUILayout.HelpBox("This avatar has all platforms disabled. This is fine if intentional.", MessageType.Warning);
+                }
+                
+                var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
+                using (new EditorGUI.DisabledGroupScope(!enabledAll))
+                    ContinuousAvatarUploader.UploadButtonGui(avatars, Repaint);
+
+                serializedObject.ApplyModifiedProperties();
+            });
+            root.Add(avatarSection);
+
+            // Platform settings - use simple PropertyFields for automatic UIElements rendering
+            AddPropertyField(root, _windows);
+            AddPropertyField(root, _quest);
+            AddPropertyField(root, _ios);
+
+            // Camera configuration - keep IMGUI for preview functionality
+            var cameraSection = new IMGUIContainer(() =>
+            {
+                serializedObject.Update();
+
+                if (serializedObject.isEditingMultipleObjects)
+                {
+                    EditorGUILayout.LabelField("Editing Camera Position is not supported in multi-editing");
+                }
+                else
+                {
+                    EditorGUI.BeginDisabledGroup(
+                        !_cachedAvatar
+                        || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
+                    );
+                    if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
+                    {
+                        _previewCameraManager.AddEditor(this);
+                        _previewCameraManager.DrawPreview();
+                        if (IndentedButton("Finish Setting Camera Position"))
+                        {
+                            _previewCameraManager?.Finish();
+                            _previewCameraManager = null;
+                        }
+                    }
+                    else
+                    {
+                        if (IndentedButton("Configure Camera Position"))
+                        {
+                            _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar!);
+                        }
+                    }
+                    EditorGUI.EndDisabledGroup();
+                }
+
+                serializedObject.ApplyModifiedProperties();
+            });
+            root.Add(cameraSection);
+
+            return root;
+        }
+
+        private void AddPropertyField(VisualElement root, SerializedProperty property)
+        {
+            var field = new PropertyField(property);
+            field.Bind(serializedObject);
+            root.Add(field);
         }
 
         private void MultipleAvatarDescriptor(AvatarUploadSetting[] avatars)
@@ -117,128 +207,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
-        public override void OnInspectorGUI()
-        {
-            serializedObject.Update();
-            var avatars = targets.Cast<AvatarUploadSetting>().ToArray();
-
-            if (serializedObject.isEditingMultipleObjects)
-            {
-                MultipleAvatarDescriptor(avatars);
-            }
-            else
-            {
-                SingleAvatarDescriptor(_avatarDescriptor);
-            }
-
-            if (!serializedObject.isEditingMultipleObjects)
-            {
-                var avatar = avatars.First();
-                if (!avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled)
-                    EditorGUILayout.HelpBox("This avatar has all platforms disabled. This is fine if intentional.", MessageType.Warning);
-            }
-            
-            {
-                var enabledAll = avatars.All(x => x.GetCurrentPlatformInfo().enabled);
-                using (new EditorGUI.DisabledGroupScope(!enabledAll))
-                    ContinuousAvatarUploader.UploadButtonGui(avatars, Repaint);
-            }
-
-            DrawPlatformSpecificInfo(Labels.PCWindows, _windows);
-            DrawPlatformSpecificInfo(Labels.QuestAndroid, _quest);
-            DrawPlatformSpecificInfo(Labels.IOS, _ios);
-
-            if (serializedObject.isEditingMultipleObjects)
-            {
-                EditorGUILayout.LabelField("Editing Camera Position is not supported in multi-editing");
-            }
-            else
-            {
-                EditorGUI.BeginDisabledGroup(
-                    !_cachedAvatar
-                    // previewing other avatar
-                    || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
-                );
-                if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
-                {
-                    _previewCameraManager.AddEditor(this);
-                    _previewCameraManager.DrawPreview();
-                    if (IndentedButton("Finish Setting Camera Position"))
-                    {
-                        _previewCameraManager?.Finish();
-                        _previewCameraManager = null;
-                    }
-                }
-                else
-                {
-                    if (IndentedButton("Configure Camera Position"))
-                    {
-                        _previewCameraManager = new PreviewCameraManager(this, _cachedAvatar!);
-                    }
-                }
-
-                EditorGUI.EndDisabledGroup();
-            }
-
-            serializedObject.ApplyModifiedProperties();
-        }
-
         private void OnDisable()
         {
             if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar) 
             {
                 _previewCameraManager.RemoveEditor(this);
-            }
-        }
-
-        private void DrawPlatformSpecificInfo(GUIContent name, SerializedProperty infoProp)
-        {
-            // props
-            var enabled = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.enabled));
-            var updateImage = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.updateImage));
-            var imageTakeEditorMode = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.imageTakeEditorMode));
-            var versioningEnabled = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.versioningEnabled));
-            var versionNamePrefix = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.versionNamePrefix));
-            var gitEnabled = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.gitEnabled));
-            var tagPrefix = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.tagPrefix));
-            var tagSuffix = infoProp.FindPropertyRelative(nameof(PlatformSpecificInfo.tagSuffix));
-
-            ExEditorGUILayout.ToggleLeft(enabled, name);
-
-            ToggleScope(enabled, () =>
-            {
-                ExEditorGUILayout.ToggleLeft(updateImage, Labels.UpdateImage);
-                ToggleScope(updateImage, () =>
-                {
-                    EditorGUILayout.PropertyField(imageTakeEditorMode, Labels.TakeImageIn);
-                });
-                ExEditorGUILayout.ToggleLeft(versioningEnabled, Labels.VersioningSystem);
-                ToggleScope(versioningEnabled, () =>
-                {
-                    EditorGUILayout.PropertyField(versionNamePrefix, Labels.VersionNamePrefix);
-                    if (!versionNamePrefix.hasMultipleDifferentValues)
-                        EditorGUILayout.LabelField($"'({versionNamePrefix.stringValue}<version>)'will be added in avatar description");
-                    ExEditorGUILayout.ToggleLeft(gitEnabled, Labels.GitTagging);
-                    ToggleScope(gitEnabled, () =>
-                    {
-                        EditorGUILayout.PropertyField(tagPrefix, Labels.TagPrefix);
-                        EditorGUILayout.PropertyField(tagSuffix, Labels.TagSuffix);
-                        if (!tagPrefix.hasMultipleDifferentValues && !tagSuffix.hasMultipleDifferentValues)
-                            EditorGUILayout.LabelField($"tag name will be '{tagPrefix.stringValue}<version>{tagSuffix.stringValue}'");
-                    });
-                });
-            });
-        }
-
-        private void ToggleScope(SerializedProperty prop, Action scope)
-        {
-            if (prop.boolValue || prop.hasMultipleDifferentValues)
-            {
-                EditorGUI.BeginDisabledGroup(prop.hasMultipleDifferentValues);
-                EditorGUI.indentLevel++;
-                scope();
-                EditorGUI.indentLevel--;
-                EditorGUI.EndDisabledGroup();
             }
         }
 
