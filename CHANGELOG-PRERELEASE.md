@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog].
 ### Added
 
 - Handle `ApiErrorException` and provide details about request and api error during upload. [`#150`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/150)
+- "Free Memory Between Uploads" preference (default: enabled) that calls `UnloadUnusedAssets` and `GC.Collect` after each avatar upload to mitigate memory accumulation during long batch uploads.
 
 ### Changed
 
