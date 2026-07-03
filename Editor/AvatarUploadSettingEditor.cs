@@ -57,7 +57,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             else
             {
                 var descriptor = avatars[0].avatarDescriptor;
-                var avatar = descriptor.TryResolve();
+                var avatar = descriptor.GetCachedResolve();
                 if (avatar != null || descriptor.IsNull())
                 {
                     EditorGUILayout.ObjectField(Labels.Avatar, avatar, typeof(VRCAvatarDescriptor), true);
@@ -99,7 +99,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             else
             {
                 if (!_cachedAvatar)
-                    _cachedAvatar = descriptor.TryResolve() as VRCAvatarDescriptor;
+                    _cachedAvatar = descriptor.GetCachedResolve() as VRCAvatarDescriptor;
                 if (_cachedAvatar)
                 {
                     EditorGUILayout.ObjectField(Labels.Avatar, _cachedAvatar, typeof(VRCAvatarDescriptor), true);
@@ -249,7 +249,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             var target = this.target as AvatarUploadSetting;
             if (target == null) return null;
             if (!target.avatarDescriptor.IsAssetReference()) return null;
-            var targetAvatar = target.avatarDescriptor.TryResolve() as VRCAvatarDescriptor;
+            var targetAvatar = target.avatarDescriptor.GetCachedResolve() as VRCAvatarDescriptor;
             if (targetAvatar == null) return null;
             var targetGameObject = targetAvatar.gameObject;
 
