@@ -34,7 +34,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             EditorGUILayout.LabelField("Avatar Upload Settings", EditorStyles.boldLabel);
 
-            var hasAvatarWithAllPlatformsDisabled = _asset.avatars.Any(avatar => !avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled);
+            var hasAvatarWithAllPlatformsDisabled = _asset.avatars.Any(avatar => avatar && !avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled);
             if (hasAvatarWithAllPlatformsDisabled)
                 EditorGUILayout.HelpBox("Some avatars have all platforms disabled. This is fine if intentional.", MessageType.Warning);
 
@@ -53,6 +53,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private void DrawAvatarRow(int index)
         {
             var setting = _asset.avatars[index];
+            if (!setting)
+            {
+                DrawMissingAvatarRow(index);
+                return;
+            }
+
             var instanceId = setting.GetInstanceID();
             var expanded = _expandedSettings.Contains(instanceId);
 
@@ -82,6 +88,22 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 EditorGUI.indentLevel++;
                 GetSettingEditor(setting).OnInspectorGUI();
                 EditorGUI.indentLevel--;
+            }
+
+            HorizontalLine();
+        }
+
+        // An entry can be null when its sub asset went missing, and every other row helper assumes it isn't.
+        private void DrawMissingAvatarRow(int index)
+        {
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                EditorGUILayout.LabelField($"Avatar #{index}: (missing)");
+
+                GUILayout.FlexibleSpace();
+
+                if (GUILayout.Button("Remove Avatar", EditorStyles.miniButton))
+                    RemoveMissingAndExit(index);
             }
 
             HorizontalLine();
@@ -144,6 +166,17 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             ArrayUtility.Remove(ref _asset.avatars, setting);
             EditorUtility.SetDirty(_asset);
             Object.DestroyImmediate(setting, true);
+            AssetDatabase.SaveAssetIfDirty(_asset);
+
+            GUIUtility.ExitGUI();
+        }
+
+        private void RemoveMissingAndExit(int index)
+        {
+            var avatars = _asset.avatars.ToList();
+            avatars.RemoveAt(index);
+            _asset.avatars = avatars.ToArray();
+            EditorUtility.SetDirty(_asset);
             AssetDatabase.SaveAssetIfDirty(_asset);
 
             GUIUtility.ExitGUI();
