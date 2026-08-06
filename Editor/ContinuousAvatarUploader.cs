@@ -312,8 +312,9 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             if (UploadOrchestrator.IsUploadInProgress()) result |= UploadCheckResult.Uploading;
             if (EditorApplication.isPlayingOrWillChangePlaymode) result |= UploadCheckResult.PlayMode;
             if (!Uploader.VerifyCredentials(repaint)) result |= UploadCheckResult.NoCredentials;
-            if (!VRCSdkControlPanel.window) result |= UploadCheckResult.ControlPanelClosed;
-            if (!VRCSdkControlPanel.TryGetBuilder<IVRCSdkAvatarBuilderApi>(out _)) result |= UploadCheckResult.NoAvatarBuilder;
+            // A closed panel implies no builder; don't ask TryGetBuilder, it logs a console error every call while closed.
+            if (!VRCSdkControlPanel.window) result |= UploadCheckResult.ControlPanelClosed | UploadCheckResult.NoAvatarBuilder;
+            else if (!VRCSdkControlPanel.TryGetBuilder<IVRCSdkAvatarBuilderApi>(out _)) result |= UploadCheckResult.NoAvatarBuilder;
             if (!CheckPlaymodeSettings(avatars)) result |= UploadCheckResult.PlayModeSettingsNotGood;
 
             foreach (var platform in Uploader.GetTargetPlatforms())

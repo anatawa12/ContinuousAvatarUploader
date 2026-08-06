@@ -57,7 +57,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             else
             {
                 var descriptor = avatars[0].avatarDescriptor;
-                var avatar = descriptor.TryResolve();
+                var avatar = descriptor.GetCachedResolve();
                 if (avatar != null || descriptor.IsNull())
                 {
                     EditorGUILayout.ObjectField(Labels.Avatar, avatar, typeof(VRCAvatarDescriptor), true);
