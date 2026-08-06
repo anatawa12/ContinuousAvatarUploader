@@ -311,6 +311,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void SwapAndExit(int from, int to)
         {
+            Undo.RecordObject(_asset, "Move Avatar Upload Setting");
             Swap(from, to);
             EditorUtility.SetDirty(_asset);
 
@@ -329,6 +330,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             var selected = new HashSet<int>(selectedIds);
             var avatars = _asset.avatars;
+
+            Undo.RecordObject(_asset, direction < 0 ? "Move Avatar Upload Settings Up" : "Move Avatar Upload Settings Down");
 
             if (direction < 0)
             {
@@ -380,6 +383,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         private static bool IsSelected(AvatarUploadSetting setting, HashSet<int> selectedIds) =>
             setting && selectedIds.Contains(setting.GetInstanceID());
 
+        // Not undoable: undo would restore the array with references to sub assets that are already destroyed.
         private void RemoveAndExit(AvatarUploadSetting setting)
         {
             ForgetEditorState(setting);
@@ -394,6 +398,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void RemoveMissingAndExit(int index)
         {
+            Undo.RecordObject(_asset, "Remove Missing Avatar Upload Setting");
             var avatars = _asset.avatars.ToList();
             avatars.RemoveAt(index);
             _asset.avatars = avatars.ToArray();
