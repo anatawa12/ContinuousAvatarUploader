@@ -1,12 +1,8 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
-using UnityEngine.UIElements;
 using VRC.SDK3.Avatars.Components;
-using Debug = System.Diagnostics.Debug;
 using Object = UnityEngine.Object;
 
 namespace Anatawa12.ContinuousAvatarUploader.Editor
@@ -15,193 +11,167 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     public class AvatarUploadSettingGroupEditor : UnityEditor.Editor
     {
         private AvatarUploadSettingGroup _asset;
-        private Dictionary<int, CreateDescriptorContainer> _inspectorsDoctionary = new Dictionary<int, CreateDescriptorContainer>();
-        private List<CreateDescriptorContainer> _inspectors = new List<CreateDescriptorContainer>();
-        private VisualElement _inspector;
-        private const int CreatePerFrame = 5;
-        private const int CreateInitial = 20;
+        private VRCAvatarDescriptor _avatarToAdd;
+        private readonly HashSet<int> _expandedSettings = new HashSet<int>();
+        private readonly Dictionary<int, UnityEditor.Editor> _settingEditors = new Dictionary<int, UnityEditor.Editor>();
 
-        public override VisualElement CreateInspectorGUI()
+        private void OnEnable()
         {
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
             _asset = (AvatarUploadSettingGroup)target;
+        }
 
-            var root = new VisualElement()
+        private void OnDisable()
+        {
+            foreach (var editor in _settingEditors.Values)
+                if (editor)
+                    Object.DestroyImmediate(editor);
+            _settingEditors.Clear();
+        }
+
+        public override void OnInspectorGUI()
+        {
+            if (!_asset) return;
+
+            EditorGUILayout.LabelField("Avatar Upload Settings", EditorStyles.boldLabel);
+
+            var hasAvatarWithAllPlatformsDisabled = _asset.avatars.Any(avatar => !avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled);
+            if (hasAvatarWithAllPlatformsDisabled)
+                EditorGUILayout.HelpBox("Some avatars have all platforms disabled. This is fine if intentional.", MessageType.Warning);
+
+            ContinuousAvatarUploader.UploadButtonGui(new[] { _asset }, Repaint);
+
+            EditorGUILayout.Space();
+
+            for (var index = 0; index < _asset.avatars.Length; index++)
+                DrawAvatarRow(index);
+
+            EditorGUILayout.Space();
+
+            DrawAddAvatar();
+        }
+
+        private void DrawAvatarRow(int index)
+        {
+            var setting = _asset.avatars[index];
+            var instanceId = setting.GetInstanceID();
+            var expanded = _expandedSettings.Contains(instanceId);
+
+            using (new EditorGUILayout.HorizontalScope())
             {
-                name = "RootElement"
-            };
-            _inspector = new VisualElement()
+                var nextExpanded = GUILayout.Toggle(expanded, BuildTitle(setting, index), EditorStyles.foldout);
+                if (nextExpanded != expanded)
+                    SetExpanded(instanceId, nextExpanded);
+
+                GUILayout.FlexibleSpace();
+
+                using (new EditorGUI.DisabledScope(index == 0))
+                    if (GUILayout.Button("▲", EditorStyles.miniButton, GUILayout.Width(30)))
+                        SwapAndExit(index, index - 1);
+
+                if (GUILayout.Button("Remove Avatar", EditorStyles.miniButton))
+                    RemoveAndExit(setting);
+
+                using (new EditorGUI.DisabledScope(index == _asset.avatars.Length - 1))
+                    if (GUILayout.Button("▼", EditorStyles.miniButton, GUILayout.Width(30)))
+                        SwapAndExit(index, index + 1);
+            }
+
+            // The child editor is the expensive part to construct, so it's created on first expansion only.
+            if (expanded)
             {
-                name = "Inspectors"
-            };
+                EditorGUI.indentLevel++;
+                GetSettingEditor(setting).OnInspectorGUI();
+                EditorGUI.indentLevel--;
+            }
 
-            var header = new IMGUIContainer(() =>
+            HorizontalLine();
+        }
+
+        private void DrawAddAvatar()
+        {
+            _avatarToAdd = EditorGUILayout.ObjectField("Avatar to Add", _avatarToAdd,
+                typeof(VRCAvatarDescriptor), true) as VRCAvatarDescriptor;
+
+            using (new EditorGUI.DisabledScope(!_avatarToAdd))
             {
-                EditorGUILayout.LabelField("Avatar Upload Settings", EditorStyles.boldLabel);
-
-                var hasAvatarWithAllPlatformsDisabled = _asset.avatars.Any(avatar => !avatar.ios.enabled && !avatar.quest.enabled && !avatar.windows.enabled);
-                if (hasAvatarWithAllPlatformsDisabled)
-                    EditorGUILayout.HelpBox("Some avatars have all platforms disabled. This is fine if intentional.", MessageType.Warning);
-                
-                ContinuousAvatarUploader.UploadButtonGui(new[] { _asset }, Repaint);
-
-                EditorGUILayout.Space();
-            });
-
-            RecreateInspectors(throttled: true);
-            CreateInspectorElementsThrottled();
-
-            VRCAvatarDescriptor avatarDescriptor = null;
-            var trailer = new IMGUIContainer(() =>
-            {
-                avatarDescriptor = EditorGUILayout.ObjectField("Avatar to Add", avatarDescriptor,
-                    typeof(VRCAvatarDescriptor), true) as VRCAvatarDescriptor;
-
-                EditorGUI.BeginDisabledGroup(!avatarDescriptor);
                 if (GUILayout.Button("Add Avatar"))
                 {
-                    Debug.Assert(avatarDescriptor != null, nameof(avatarDescriptor) + " != null");
                     var newObj = ScriptableObject.CreateInstance<AvatarUploadSetting>();
-                    newObj.avatarDescriptor = new MaySceneReference(avatarDescriptor);
-                    newObj.name = newObj.avatarName = avatarDescriptor.gameObject.name;
+                    newObj.avatarDescriptor = new MaySceneReference(_avatarToAdd);
+                    newObj.name = newObj.avatarName = _avatarToAdd.gameObject.name;
 
                     ArrayUtility.Add(ref _asset.avatars, newObj);
                     EditorUtility.SetDirty(_asset);
                     AssetDatabase.AddObjectToAsset(newObj, _asset);
                     AssetDatabase.SaveAssetIfDirty(newObj);
-                    avatarDescriptor = null;
+                    _avatarToAdd = null;
 
-                    RecreateInspectors();
+                    GUIUtility.ExitGUI();
                 }
-
-                EditorGUI.EndDisabledGroup();
-            });
-
-            root.Add(header);
-            root.Add(_inspector);
-            root.Add(trailer);
-
-            UnityEngine.Debug.Log($"CreateInspectorGUI took {stopwatch.ElapsedMilliseconds}ms");
-
-            return root;
-        }
-
-        private void CreateInspectorElementsThrottled()
-        {
-            var index = 0;
-
-            for (var i = 0; i < CreateInitial; i++)
-            {
-                if (index >= _inspectors.Count) return;
-                _inspectors[index].CreateInspectorElement();
-                index++;
             }
-
-            void CreateFrame()
-            {
-                for (var i = 0; i < CreatePerFrame; i++)
-                {
-                    if (index >= _inspectors.Count) return;
-                    _inspectors[index].CreateInspectorElement();
-                    index++;
-                }
-
-                EditorApplication.delayCall += CreateFrame;
-            }
-
-            EditorApplication.delayCall += CreateFrame;
         }
 
-        void RecreateInspectors() => RecreateInspectors(false);
-
-        void RecreateInspectors(bool throttled)
+        private UnityEditor.Editor GetSettingEditor(AvatarUploadSetting setting)
         {
-            _inspector.Clear();
-            _inspectors.Clear();
-            var instanceIds = new HashSet<int>();
-            foreach (var assetAvatar in _asset.avatars)
-            {
-                var instanceId = assetAvatar.GetInstanceID();
-                instanceIds.Add(instanceId);
-                if (!_inspectorsDoctionary.TryGetValue(instanceId, out var container))
-                {
-                    _inspectorsDoctionary.Add(instanceId,
-                        container = new CreateDescriptorContainer(_asset, assetAvatar));
-                    container.OnReorder += RecreateInspectors;
-                    if (!throttled) container.CreateInspectorElement();
-                }
-
-                _inspector.Add(container);
-                _inspectors.Add(container);
-            }
-
-            foreach (var i in _inspectorsDoctionary.Keys.ToArray())
-                if (!instanceIds.Contains(i))
-                    _inspectorsDoctionary.Remove(i);
-        }
-    }
-
-    class CreateDescriptorContainer : VisualElement
-    {
-        public event Action OnReorder;
-        private readonly AvatarUploadSetting _setting;
-        private readonly VisualElement _inspectorElementContainer;
-
-        public CreateDescriptorContainer(AvatarUploadSettingGroup group, AvatarUploadSetting setting)
-        {
-            _setting = setting;
-            Add(new IMGUIContainer(() =>
-            {
-                int index = System.Array.IndexOf(group.avatars, setting);
-                EditorGUILayout.LabelField($"Avatar #{index}");
-            }));
-            Add(_inspectorElementContainer = new VisualElement());
-            Add(new IMGUIContainer(() =>
-            {
-                GUILayout.BeginHorizontal();
-                EditorGUI.BeginDisabledGroup(group.avatars[0] == setting);
-                if (GUILayout.Button("▲", EditorStyles.miniButton, GUILayout.Width(30)))
-                {
-                    var index = System.Array.IndexOf(group.avatars, setting);
-                    Debug.Assert(index != -1, nameof(index) + " != -1");
-                    var temp = group.avatars[index - 1];
-                    group.avatars[index - 1] = setting;
-                    group.avatars[index] = temp;
-                    EditorUtility.SetDirty(group);
-
-                    OnReorder?.Invoke();
-                }
-                EditorGUI.EndDisabledGroup();
-                if (GUILayout.Button("Remove Avatar"))
-                {
-                    ArrayUtility.Remove(ref group.avatars, setting);
-                    EditorUtility.SetDirty(group);
-                    Object.DestroyImmediate(setting, true);
-                    AssetDatabase.SaveAssetIfDirty(group);
-
-                    OnReorder?.Invoke();
-                }
-                EditorGUI.BeginDisabledGroup(group.avatars[group.avatars.Length - 1] == setting);
-                if (GUILayout.Button("▼", EditorStyles.miniButton, GUILayout.Width(30)))
-                {
-                    var index = System.Array.IndexOf(group.avatars, setting);
-                    Debug.Assert(index != -1, nameof(index) + " != -1");
-                    var temp = group.avatars[index + 1];
-                    group.avatars[index + 1] = setting;
-                    group.avatars[index] = temp;
-                    EditorUtility.SetDirty(group);
-
-                    OnReorder?.Invoke();
-                }
-                GUILayout.EndHorizontal();
-                HorizontalLine();
-            }));
+            var instanceId = setting.GetInstanceID();
+            if (!_settingEditors.TryGetValue(instanceId, out var editor) || !editor)
+                _settingEditors[instanceId] = editor = CreateEditor(setting);
+            return editor;
         }
 
-        public void CreateInspectorElement()
+        private void SetExpanded(int instanceId, bool expanded)
         {
-            if (_inspectorElementContainer.childCount != 0) return;
-            _inspectorElementContainer.Add(new InspectorElement(_setting));
+            if (expanded)
+                _expandedSettings.Add(instanceId);
+            else
+                _expandedSettings.Remove(instanceId);
+        }
+
+        private void SwapAndExit(int from, int to)
+        {
+            var temp = _asset.avatars[to];
+            _asset.avatars[to] = _asset.avatars[from];
+            _asset.avatars[from] = temp;
+            EditorUtility.SetDirty(_asset);
+
+            GUIUtility.ExitGUI();
+        }
+
+        private void RemoveAndExit(AvatarUploadSetting setting)
+        {
+            ForgetEditorState(setting);
+
+            ArrayUtility.Remove(ref _asset.avatars, setting);
+            EditorUtility.SetDirty(_asset);
+            Object.DestroyImmediate(setting, true);
+            AssetDatabase.SaveAssetIfDirty(_asset);
+
+            GUIUtility.ExitGUI();
+        }
+
+        private void ForgetEditorState(AvatarUploadSetting setting)
+        {
+            var instanceId = setting.GetInstanceID();
+            if (_settingEditors.TryGetValue(instanceId, out var editor) && editor)
+                Object.DestroyImmediate(editor);
+            _settingEditors.Remove(instanceId);
+            _expandedSettings.Remove(instanceId);
+        }
+
+        // A collapsed row shows nothing but its title, so it has to carry enough to tell the avatars apart.
+        private static string BuildTitle(AvatarUploadSetting setting, int index)
+        {
+            var avatarName = string.IsNullOrEmpty(setting.avatarName) ? setting.name : setting.avatarName;
+            return $"Avatar #{index}: {avatarName} [{BuildPlatformSummary(setting)}]";
+        }
+
+        private static string BuildPlatformSummary(AvatarUploadSetting setting)
+        {
+            var platforms = new List<string>(3);
+            if (setting.windows.enabled) platforms.Add("PC");
+            if (setting.quest.enabled) platforms.Add("Quest");
+            if (setting.ios.enabled) platforms.Add("iOS");
+            return platforms.Count == 0 ? "disabled" : string.Join(", ", platforms);
         }
 
         private static void HorizontalLine(float regionHeight = 18f, float lineHeight = 1f)
