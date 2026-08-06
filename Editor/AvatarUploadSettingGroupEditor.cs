@@ -11,10 +11,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     [CustomEditor(typeof(AvatarUploadSettingGroup))]
     public class AvatarUploadSettingGroupEditor : UnityEditor.Editor
     {
+        private const float SelectionToggleWidth = 20f;
+
         private AvatarUploadSettingGroup _asset;
         private VRCAvatarDescriptor _avatarToAdd;
         private string _searchText = "";
         private readonly HashSet<int> _expandedSettings = new HashSet<int>();
+        private readonly HashSet<int> _selectedSettings = new HashSet<int>();
         private readonly Dictionary<int, UnityEditor.Editor> _settingEditors = new Dictionary<int, UnityEditor.Editor>();
 
         private void OnEnable()
@@ -48,6 +51,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             var visibleIndices = BuildVisibleIndices();
             EditorGUILayout.LabelField(BuildCountLabel(visibleIndices.Count), EditorStyles.miniLabel);
+            DrawBatchToolbar(visibleIndices);
 
             if (visibleIndices.Count == 0 && IsSearching)
             {
@@ -65,6 +69,63 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         }
 
         private bool IsSearching => !string.IsNullOrWhiteSpace(_searchText);
+
+        private void DrawSelectionToggle(int instanceId)
+        {
+            var selected = _selectedSettings.Contains(instanceId);
+            if (EditorGUILayout.Toggle(selected, GUILayout.Width(SelectionToggleWidth)) == selected) return;
+
+            if (selected)
+                _selectedSettings.Remove(instanceId);
+            else
+                _selectedSettings.Add(instanceId);
+        }
+
+        // Batch operations act on the selected rows that are currently shown, never on ones hidden by the search.
+        private void DrawBatchToolbar(List<int> visibleIndices)
+        {
+            var selected = VisibleSettings(visibleIndices)
+                .Select(setting => setting.GetInstanceID())
+                .Where(id => _selectedSettings.Contains(id))
+                .ToList();
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                GUILayout.Space(SelectionToggleWidth);
+                EditorGUILayout.LabelField($"{selected.Count} selected", EditorStyles.miniLabel, GUILayout.Width(76));
+
+                using (new EditorGUI.DisabledScope(visibleIndices.Count == 0))
+                {
+                    if (GUILayout.Button("Select Shown", EditorStyles.miniButtonLeft, GUILayout.Width(88)))
+                        foreach (var setting in VisibleSettings(visibleIndices))
+                            _selectedSettings.Add(setting.GetInstanceID());
+                }
+
+                using (new EditorGUI.DisabledScope(selected.Count == 0))
+                {
+                    if (GUILayout.Button("Deselect", EditorStyles.miniButtonMid, GUILayout.Width(64)))
+                        foreach (var id in selected)
+                            _selectedSettings.Remove(id);
+
+                    using (new EditorGUI.DisabledScope(IsSearching))
+                    {
+                        if (GUILayout.Button("Move Up", EditorStyles.miniButtonMid, GUILayout.Width(66)))
+                            MoveSelectedAndExit(selected, -1);
+
+                        if (GUILayout.Button("Move Down", EditorStyles.miniButtonMid, GUILayout.Width(78)))
+                            MoveSelectedAndExit(selected, 1);
+                    }
+
+                    if (GUILayout.Button("Delete", EditorStyles.miniButtonRight, GUILayout.Width(56)))
+                        DeleteSelectedAndExit(selected);
+                }
+
+                GUILayout.FlexibleSpace();
+            }
+        }
+
+        private IEnumerable<AvatarUploadSetting> VisibleSettings(List<int> visibleIndices) =>
+            visibleIndices.Select(index => _asset.avatars[index]).Where(setting => setting);
 
         private string BuildCountLabel(int visibleCount) =>
             IsSearching
@@ -159,6 +220,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             using (new EditorGUILayout.HorizontalScope())
             {
+                DrawSelectionToggle(instanceId);
+
                 var nextExpanded = GUILayout.Toggle(expanded, BuildTitle(setting, index), EditorStyles.foldout);
                 if (nextExpanded != expanded)
                     SetExpanded(instanceId, nextExpanded);
@@ -194,6 +257,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         {
             using (new EditorGUILayout.HorizontalScope())
             {
+                GUILayout.Space(SelectionToggleWidth);
                 EditorGUILayout.LabelField($"Avatar #{index}: (missing)");
 
                 GUILayout.FlexibleSpace();
@@ -247,13 +311,74 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private void SwapAndExit(int from, int to)
         {
-            var temp = _asset.avatars[to];
-            _asset.avatars[to] = _asset.avatars[from];
-            _asset.avatars[from] = temp;
+            Swap(from, to);
             EditorUtility.SetDirty(_asset);
 
             GUIUtility.ExitGUI();
         }
+
+        private void Swap(int first, int second)
+        {
+            var temp = _asset.avatars[second];
+            _asset.avatars[second] = _asset.avatars[first];
+            _asset.avatars[first] = temp;
+        }
+
+        // Each selected entry hops over the nearest unselected neighbour, so a selected block moves as a block.
+        private void MoveSelectedAndExit(List<int> selectedIds, int direction)
+        {
+            var selected = new HashSet<int>(selectedIds);
+            var avatars = _asset.avatars;
+
+            if (direction < 0)
+            {
+                for (var index = 1; index < avatars.Length; index++)
+                    if (IsSelected(avatars[index], selected) && !IsSelected(avatars[index - 1], selected))
+                        Swap(index, index - 1);
+            }
+            else
+            {
+                for (var index = avatars.Length - 2; index >= 0; index--)
+                    if (IsSelected(avatars[index], selected) && !IsSelected(avatars[index + 1], selected))
+                        Swap(index, index + 1);
+            }
+
+            EditorUtility.SetDirty(_asset);
+
+            GUIUtility.ExitGUI();
+        }
+
+        private void DeleteSelectedAndExit(List<int> selectedIds)
+        {
+            if (!EditorUtility.DisplayDialog("Delete Avatar Upload Settings",
+                    $"Delete {selectedIds.Count} avatar upload setting(s) from this group?\n\nThis cannot be undone.",
+                    "Delete", "Cancel"))
+                return;
+
+            var selected = new HashSet<int>(selectedIds);
+            var kept = new List<AvatarUploadSetting>(_asset.avatars.Length);
+
+            foreach (var setting in _asset.avatars)
+            {
+                if (!IsSelected(setting, selected))
+                {
+                    kept.Add(setting);
+                    continue;
+                }
+
+                ForgetEditorState(setting);
+                Object.DestroyImmediate(setting, true);
+            }
+
+            _asset.avatars = kept.ToArray();
+            EditorUtility.SetDirty(_asset);
+            AssetDatabase.SaveAssetIfDirty(_asset);
+
+            GUIUtility.ExitGUI();
+        }
+
+        private static bool IsSelected(AvatarUploadSetting setting, HashSet<int> selectedIds) =>
+            setting && selectedIds.Contains(setting.GetInstanceID());
 
         private void RemoveAndExit(AvatarUploadSetting setting)
         {
@@ -285,6 +410,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 Object.DestroyImmediate(editor);
             _settingEditors.Remove(instanceId);
             _expandedSettings.Remove(instanceId);
+            _selectedSettings.Remove(instanceId);
         }
 
         // A collapsed row shows nothing but its title, so it has to carry enough to tell the avatars apart.
