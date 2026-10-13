@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog].
 ### Fixed
 
 - VRCFury PC→Android parameter sync when uploading via CAU: set `VRC_SdkBuilder.ActiveBuildType` and invoke `OnSdkUpload*` callbacks. [`#145`](https://github.com/anatawa12/ContinuousAvatarUploader/issues/145)
+- `Configure Camera Position` button may not work from some inspector windows `#168`
 
 ### Security
 

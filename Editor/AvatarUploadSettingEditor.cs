@@ -159,6 +159,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     // previewing other avatar
                     || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
                 );
+                if (_previewCameraManager?.IsFinished ?? false) _previewCameraManager = null;
                 if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
                 {
                     _previewCameraManager.AddEditor(this);
@@ -330,6 +331,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
     sealed class PreviewCameraManager
     {
         private Camera _camera;
+        private ActiveEditorTracker _tracker;
         private bool _prevLocked;
         private Object[] _prevSelection;
         private readonly Object[] _trackerTargets;
@@ -339,6 +341,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private readonly HashSet<UnityEditor.Editor> _editors;
         private readonly Scene _previewScene;
+
+        public bool IsFinished => _camera == null;
 
         public PreviewCameraManager([NotNull] UnityEditor.Editor editor,
             [NotNull] VRCAvatarDescriptor cachedAvatar)
@@ -355,9 +359,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     AssetDatabase.GetAssetPath(cachedAvatar), _previewScene);
             }
 
-            _prevLocked = ActiveEditorTracker.sharedTracker.isLocked;
-            ActiveEditorTracker.sharedTracker.isLocked = true;
-            _trackerTargets = ActiveEditorTracker.sharedTracker.activeEditors.Select(x => x.target).ToArray();
+            _tracker = editor.GetEditorTracker() ?? ActiveEditorTracker.sharedTracker;
+            _prevLocked = _tracker.isLocked;
+            _tracker.isLocked = true;
+            _trackerTargets = _tracker.activeEditors.Select(x => x.target).ToArray();
 
             _camera = EditorUtility.CreateGameObjectWithHideFlags("VRCCam Shim Camera", HideFlags.DontSave,
                     typeof(Camera))
@@ -444,7 +449,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             Object.DestroyImmediate(_camera.gameObject);
             _camera = null;
             Selection.objects = _prevSelection;
-            ActiveEditorTracker.sharedTracker.isLocked = _prevLocked;
+            _tracker.isLocked = _prevLocked;
 
             // ReSharper disable once PossiblyImpureMethodCallOnReadonlyVariable // IsValid doesn't change
             if (_previewScene.IsValid())
