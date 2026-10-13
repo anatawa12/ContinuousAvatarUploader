@@ -159,6 +159,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     // previewing other avatar
                     || _previewCameraManager != null && _previewCameraManager.Target != _cachedAvatar
                 );
+                if (_previewCameraManager?.IsFinished ?? false) _previewCameraManager = null;
                 if (_previewCameraManager != null && _previewCameraManager.Target == _cachedAvatar)
                 {
                     _previewCameraManager.AddEditor(this);
@@ -339,6 +340,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         private readonly HashSet<UnityEditor.Editor> _editors;
         private readonly Scene _previewScene;
+
+        public bool IsFinished => _camera == null;
 
         public PreviewCameraManager([NotNull] UnityEditor.Editor editor,
             [NotNull] VRCAvatarDescriptor cachedAvatar)
