@@ -49,6 +49,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
         /// </summary>
         public bool continueUploadOnError;
 
+        /// <summary>
+        /// Whether to pause the upload process when a build or upload error occurs.
+        /// </summary>
+        public bool pauseUploadOnError;
+
         // Mutable fields that describe the current progress of the upload
         /// <summary>
         /// The index of the current upload is in progress.

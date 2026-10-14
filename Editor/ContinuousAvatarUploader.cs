@@ -142,9 +142,31 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 {
                     EditorGUILayout.ObjectField("Uploading", _currentUploadingAvatar, typeof(AvatarUploadSetting), true);
                 }
+                else if (UploadOrchestrator.IsPauseRequested())
+                {
+                    if (!UploadOrchestrator.IsPauseDueToError())
+                    {
+                        GUILayout.Label("Upload Paused");
+                    }
+                    else
+                    {
+                        GUILayout.Label("Upload Paused due to error. Please check the error and choose to resume or abort upload.");
+                    }
+                }
                 else
                 {
                     GUILayout.Label("Sleeping a little");
+                }
+
+                if (!UploadOrchestrator.IsPauseRequested())
+                {
+                    if (GUILayout.Button("PAUSE UPLOAD AFTER CURRENT UPLOAD"))
+                        UploadOrchestrator.RequestPauseUpload();
+                }
+                else
+                {
+                    if (GUILayout.Button("RESUME PAUSED UPLOAD"))
+                        UploadOrchestrator.ResumePausedUpload();
                 }
 
                 if (GUILayout.Button("ABORT UPLOAD"))
@@ -172,6 +194,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 new GUIContent("Continue upload other avatars on build or upload error",
                     "If this is enabled, CAU will continue uploading other avatars even if some avatar build or upload (if reach retry count limit) fails."),
                 Preferences.ContinueUploadOnError);
+            Preferences.PauseUploadOnError = EditorGUILayout.ToggleLeft(
+                new GUIContent("Pause upload on build or upload error",
+                    "If this is enabled, CAU will pause uploading when some avatar build or upload (if reach retry count limit) fails, and you can choose to resume or abort upload after checking the error."),
+                Preferences.PauseUploadOnError);
             Preferences.RetryCount = EditorGUILayout.IntField(
                 new GUIContent("Retry Count", "The number of retries to attempt for each upload. Zero means no retries, so only one attempt will be made."),
                 Preferences.RetryCount);
@@ -412,6 +438,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             progress.rollbackPlatform = Preferences.RollbackBuildPlatform;
             progress.retryCount = Preferences.RetryCount;
             progress.continueUploadOnError = Preferences.ContinueUploadOnError;
+            progress.pauseUploadOnError = Preferences.PauseUploadOnError;
             UploadOrchestrator.StartUpload(progress);
         }
 

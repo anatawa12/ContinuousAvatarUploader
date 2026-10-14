@@ -29,6 +29,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
         static UploadOrchestrator() => EditorApplication.delayCall += ResumeUpload;
 
+        private static bool _isPauseDueToError;
+        [CanBeNull] private static TaskCompletionSource<object> _uploadPauseTcs; 
         private static CancellationTokenSource _cancellationTokenSource = new();
         private static CancellationToken CancellationToken => _cancellationTokenSource.Token;
 
@@ -93,6 +95,8 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
             Log($"Starting upload with {asset.uploadSettings.Length} Avatars");
             _cancellationTokenSource = new CancellationTokenSource();
+            _uploadPauseTcs = null;
+            _isPauseDueToError = false;
 
             // Select the first platform to upload to.
             var currentPlatform = Uploader.GetCurrentTargetPlatform();
@@ -140,7 +144,25 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
         }
 
-        public static void CancelUpload() => _cancellationTokenSource.Cancel();
+        public static void CancelUpload()
+        {
+            _cancellationTokenSource.Cancel();
+            _uploadPauseTcs?.SetResult(null);
+        }
+
+        public static void RequestPauseUpload(bool dueToError = false) {
+            _isPauseDueToError = dueToError;
+            _uploadPauseTcs = new TaskCompletionSource<object>();
+        }
+
+        public static void ResumePausedUpload()
+        {
+            _uploadPauseTcs?.TrySetResult(null);
+            _isPauseDueToError = false;
+        }
+
+        public static bool IsPauseRequested() => _uploadPauseTcs != null && !_uploadPauseTcs.Task.IsCompleted;
+        public static bool IsPauseDueToError() => _isPauseDueToError;
 
         private static bool _uploadInProgress = false;
 
@@ -175,6 +197,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
 
                 // sleep for a while to avoid overwhelming the server
                 await Task.Delay(asset.sleepMilliseconds);
+                if (_uploadPauseTcs != null) await _uploadPauseTcs.Task;
 
                 var currentPlatform = Uploader.GetCurrentTargetPlatform();
                 if (currentPlatform != asset.uploadingTargetPlatform)
@@ -269,6 +292,12 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                     asset.Save();
                     WithTryCatch(() => OnUploadSingleAvatarFailed?.Invoke(asset, avatarToUpload, new List<Exception> { exception }));
 
+                    if (asset.pauseUploadOnError)
+                    {
+                        Log("Pause upload on error is enabled, so we are pausing the upload due to the error.");
+                        RequestPauseUpload(true);
+                    }
+
                     if (!asset.continueUploadOnError)
                     {
                         Log("Continue upload other avatars on error is disabled, so we are finishing the upload due to the error.");
@@ -304,6 +333,7 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 _uploadInProgress = false;
             }
 
+            if (_uploadPauseTcs != null) await _uploadPauseTcs.Task;
             // Continue uploading the next avatar.
             await UploadNextAvatar(asset);
         }
