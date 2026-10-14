@@ -340,6 +340,13 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             finally
             {
                 _uploadInProgress = false;
+                if (Preferences.FreeMemoryBetweenUploads)
+                {
+                    // Free unused assets and managed memory between avatars to mitigate
+                    // memory accumulation during long batch uploads.
+                    EditorUtility.UnloadUnusedAssetsImmediate();
+                    GC.Collect();
+                }
             }
 
             if (_uploadPauseTcs != null) await _uploadPauseTcs.Task;

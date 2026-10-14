@@ -198,6 +198,10 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 new GUIContent("Pause upload on build or upload error",
                     "If this is enabled, CAU will pause uploading when some avatar build or upload (if reach retry count limit) fails, and you can choose to resume or abort upload after checking the error."),
                 Preferences.PauseUploadOnError);
+            Preferences.FreeMemoryBetweenUploads = EditorGUILayout.ToggleLeft(
+                new GUIContent("Free Memory Between Uploads",
+                    "If this is enabled, CAU will call UnloadUnusedAssets and GC.Collect after each avatar to reduce memory accumulation during long batch uploads."),
+                Preferences.FreeMemoryBetweenUploads);
             Preferences.RetryCount = EditorGUILayout.IntField(
                 new GUIContent("Retry Count", "The number of retries to attempt for each upload. Zero means no retries, so only one attempt will be made."),
                 Preferences.RetryCount);

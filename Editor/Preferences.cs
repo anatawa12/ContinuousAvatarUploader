@@ -55,5 +55,11 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             get => EditorPrefs.GetBool(EditorPrefsPrefix + "pause-upload-on-error", false);
             set => EditorPrefs.SetBool(EditorPrefsPrefix + "pause-upload-on-error", value);
         }
+
+        public static bool FreeMemoryBetweenUploads
+        {
+            get => EditorPrefs.GetBool(EditorPrefsPrefix + "free-memory-between-uploads", true);
+            set => EditorPrefs.SetBool(EditorPrefsPrefix + "free-memory-between-uploads", value);
+        }
     }
 }
