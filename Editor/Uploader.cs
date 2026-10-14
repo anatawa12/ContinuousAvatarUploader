@@ -334,84 +334,117 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
                 controlPanel.CheckedForIssues = true;
             }
 
-            // build avatar main process
-            string bundlePath;
-            using (new SetBlueprintIdEveryFrame(pipelineManager, pipelineManager.blueprintId))
+            // VRCFury and other tools check ActiveBuildType to distinguish publish uploads from test builds.
+            // The SDK Control Panel sets this before BuildAndUpload, but builder.Build() alone does not.
+            // See https://github.com/anatawa12/ContinuousAvatarUploader/issues/145
+#if CAU_VRCSDK_BASE_3_7_5
+            VRC_SdkBuilder.ActiveBuildType = VRC_SdkBuilder.BuildType.Publish;
+#endif
+            try
             {
-                await AddCopyrightAgreement(pipelineManager.blueprintId);
-                bundlePath = await builder.Build(avatarDescriptor.gameObject);
-
-                ValidateBuiltBundleSize(bundlePath);
-            }
-
-            // get uploaded avatar info
-            vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true,
-                cancellationToken: cancellationToken);
-
-            vrcAvatar = await UpdateAvatarFallbackTagIfNeeded(pipelineManager, vrcAvatar, cancellationToken: cancellationToken);
-
-            // VRCSDK uses CreateNewAvatar to create new avatar, and UpdateAvatarImage/Bundle to update existing avatar.
-            // However, UpdateAvatarImage/Bundle also works for new avatar so we use them always.
-            // This is simpler and has finer progress reporting.
-
-            if (picturePath != null)
-            {
-                await UploadWithRetry(async () =>
+                // build avatar main process
+                string bundlePath;
+                using (new SetBlueprintIdEveryFrame(pipelineManager, pipelineManager.blueprintId))
                 {
-                    vrcAvatar = await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
-                        cancellationToken: cancellationToken);
-                });
-            }
+                    await AddCopyrightAgreement(pipelineManager.blueprintId);
+                    bundlePath = await builder.Build(avatarDescriptor.gameObject);
 
-            await UploadWithRetry(async () =>
-            {
-                vrcAvatar = await VRCApi.UpdateAvatarBundle(vrcAvatar.ID, vrcAvatar, bundlePath,
+                    ValidateBuiltBundleSize(bundlePath);
+                }
+
+                // get uploaded avatar info
+                vrcAvatar = await VRCApi.GetAvatar(pipelineManager.blueprintId, forceRefresh: true,
                     cancellationToken: cancellationToken);
-            });
 
-            async Task UploadWithRetry(Func<Task> uploadAction)
-            {
-                var remainingRetries = uploadRetryCount;
-                for (;;)
+                vrcAvatar = await UpdateAvatarFallbackTagIfNeeded(pipelineManager, vrcAvatar, cancellationToken: cancellationToken);
+
+                // VRCSDK uses CreateNewAvatar to create new avatar, and UpdateAvatarImage/Bundle to update existing avatar.
+                // However, UpdateAvatarImage/Bundle also works for new avatar so we use them always.
+                // This is simpler and has finer progress reporting.
+
+                // Invoke OnSdkUpload* events for VRCFury compatibility (DesktopSyncData persistence).
+                // BuildAndUpload invokes these; Build + VRCApi.UpdateAvatar* does not.
+                InvokeSdkEvent(builder, "OnSdkUploadStart", EventArgs.Empty);
+
+                try
                 {
-                    try
+                    if (picturePath != null)
                     {
-                        await uploadAction();
-                        return;
-                    }
-                    catch (UploadException e)
-                    {
-                        if (e.Message == "This file was already uploaded")
+                        await UploadWithRetry(async () =>
                         {
-                            Debug.Log("Uploading skipped: already uploaded");
+                            vrcAvatar = await VRCApi.UpdateAvatarImage(vrcAvatar.ID, vrcAvatar, picturePath,
+                                cancellationToken: cancellationToken);
+                        });
+                    }
+
+                    await UploadWithRetry(async () =>
+                    {
+                        vrcAvatar = await VRCApi.UpdateAvatarBundle(vrcAvatar.ID, vrcAvatar, bundlePath,
+                            cancellationToken: cancellationToken);
+                    });
+
+                    InvokeSdkEvent(builder, "OnSdkUploadSuccess", pipelineManager.blueprintId);
+                }
+                catch (Exception ex)
+                {
+                    InvokeSdkEvent(builder, "OnSdkUploadError", ex.Message);
+                    throw;
+                }
+                finally
+                {
+                    InvokeSdkEvent(builder, "OnSdkUploadFinish", "Avatar upload finished");
+                }
+
+                async Task UploadWithRetry(Func<Task> uploadAction)
+                {
+                    var remainingRetries = uploadRetryCount;
+                    for (;;)
+                    {
+                        try
+                        {
+                            await uploadAction();
+                            return;
                         }
+                        catch (UploadException e)
+                        {
+                            if (e.Message == "This file was already uploaded")
+                            {
+                                Debug.Log("Uploading skipped: already uploaded");
+                            }
 
-                        if (remainingRetries == 0) throw;
-                        remainingRetries--;
+                            if (remainingRetries == 0) throw;
+                            remainingRetries--;
 
-                        var currentTry = uploadRetryCount - remainingRetries;
-                        Debug.LogWarning(
-                            $"Uploading failed with exception, retrying... ({currentTry}/{uploadRetryCount}): {e}");
+                            var currentTry = uploadRetryCount - remainingRetries;
+                            Debug.LogWarning(
+                                $"Uploading failed with exception, retrying... ({currentTry}/{uploadRetryCount}): {e}");
+                        }
+                    }
+                }
+
+                // update description
+                // This process may also not required with 
+                // https://feedback.vrchat.com/open-beta/p/beta-sdk-330-beta1-lack-of-ability-to-update-description-from-code
+                if (platformInfo.versioningEnabled)
+                {
+                    long versionName;
+                    (vrcAvatar.Description, versionName) =
+                        UpdateVersionName(vrcAvatar.Description, platformInfo.versionNamePrefix);
+
+                    await VRCApi.UpdateAvatarInfo(vrcAvatar.ID, vrcAvatar, cancellationToken: cancellationToken);
+
+                    if (platformInfo.gitEnabled)
+                    {
+                        var tagName = platformInfo.tagPrefix + versionName + platformInfo.tagSuffix;
+                        AddGitTag(tagName, avatarDescriptor.name);
                     }
                 }
             }
-
-            // update description
-            // This process may also not required with 
-            // https://feedback.vrchat.com/open-beta/p/beta-sdk-330-beta1-lack-of-ability-to-update-description-from-code
-            if (platformInfo.versioningEnabled)
+            finally
             {
-                long versionName;
-                (vrcAvatar.Description, versionName) =
-                    UpdateVersionName(vrcAvatar.Description, platformInfo.versionNamePrefix);
-
-                await VRCApi.UpdateAvatarInfo(vrcAvatar.ID, vrcAvatar, cancellationToken: cancellationToken);
-
-                if (platformInfo.gitEnabled)
-                {
-                    var tagName = platformInfo.tagPrefix + versionName + platformInfo.tagSuffix;
-                    AddGitTag(tagName, avatarDescriptor.name);
-                }
+#if CAU_VRCSDK_BASE_3_7_5
+                VRC_SdkBuilder.ActiveBuildType = VRC_SdkBuilder.BuildType.None;
+#endif
             }
         }
 
@@ -803,6 +836,61 @@ namespace Anatawa12.ContinuousAvatarUploader.Editor
             }
 
             return vrcAvatar;
+        }
+
+        /// <summary>
+        /// Invokes SDK event handlers via reflection for VRCFury compatibility.
+        /// Events are on IVRCSdkBuilderApi and implemented as private fields in the implementor class
+        /// (possibly on a base type), so we walk the type hierarchy.
+        /// Each subscriber is invoked individually so one failing handler does not skip others.
+        /// Exceptions from events and reflection errors are caught and logged but do not suspend upload.
+        ///
+        /// See <see href="https://github.com/anatawa12/ContinuousAvatarUploader/issues/145">#145</see>.
+        /// </summary>
+        private static void InvokeSdkEvent(IVRCSdkAvatarBuilderApi builder, string eventName, object eventArgs)
+        {
+            try
+            {
+                FieldInfo eventField = null;
+                for (var type = builder.GetType(); type != null; type = type.BaseType)
+                {
+                    eventField = type.GetField(eventName,
+                        BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly);
+                    if (eventField != null) break;
+                }
+
+                if (eventField == null)
+                {
+                    // Expected when SDK version lacks these events or the concrete builder differs.
+                    return;
+                }
+
+                var eventDelegate = eventField.GetValue(builder) as Delegate;
+                if (eventDelegate == null)
+                {
+                    // No subscribers
+                    return;
+                }
+
+                foreach (var handler in eventDelegate.GetInvocationList())
+                {
+                    try
+                    {
+                        handler.DynamicInvoke(builder, eventArgs);
+                    }
+                    catch (Exception handlerEx)
+                    {
+                        Debug.LogWarning(
+                            $"[CAU] Exception in SDK event '{eventName}' handler ({handler.Method.DeclaringType?.FullName}.{handler.Method.Name}): {handlerEx.Message}");
+                        Debug.LogException(handlerEx);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[CAU] Exception while invoking SDK event '{eventName}': {ex.Message}");
+                Debug.LogException(ex);
+            }
         }
 
         /// <summary>

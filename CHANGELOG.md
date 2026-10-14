@@ -10,6 +10,8 @@ The format is based on [Keep a Changelog].
 ### Added
 
 - Handle `ApiErrorException` and provide details about request and api error during upload. [`#150`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/150)
+- Allow user pause upload after current avatar uploaded. [`#156`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/158)
+  - Or, automatically pause upload when any error occurred during build or upload.
 
 ### Changed
 
@@ -20,6 +22,10 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+
+- VRCFury PC→Android parameter sync when uploading via CAU: set `VRC_SdkBuilder.ActiveBuildType` and invoke `OnSdkUpload*` callbacks. [`#145`](https://github.com/anatawa12/ContinuousAvatarUploader/issues/145)
+- `Configure Camera Position` button may not work from some inspector windows `#168`
+- Abort upload won't abort sleep between upload. [`#159`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/159)
 
 ### Security
 
