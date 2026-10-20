@@ -16,6 +16,8 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
+- Compatibility with VRCSDK 3.10.6 `#169`
+  - CAU is depending on publicly accessible internal SDK members and there are breaking changes to publicly accessible internal SDK members.
 
 ### Security
 
