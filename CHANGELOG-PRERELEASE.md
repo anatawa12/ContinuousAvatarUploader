@@ -16,10 +16,13 @@ The format is based on [Keep a Changelog].
 ### Removed
 
 ### Fixed
-- Compatibility with VRCSDK 3.10.6 `#169`
-  - CAU is depending on publicly accessible internal SDK members and there are breaking changes to publicly accessible internal SDK members.
 
 ### Security
+
+## [0.3.13-beta.2] - 2026-10-20
+### Fixed
+- Compatibility with VRCSDK 3.10.6 [`#169`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/169)
+  - CAU is depending on publicly accessible internal SDK members and there are breaking changes to publicly accessible internal SDK members.
 
 ## [0.3.13-beta.1] - 2026-10-14
 - Handle `ApiErrorException` and provide details about request and api error during upload. [`#150`](https://github.com/anatawa12/ContinuousAvatarUploader/pull/150)
@@ -247,7 +250,8 @@ The format is based on [Keep a Changelog].
 ### Added
 - Basic features of ContinuousAvatarUploader
 
-[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.13-beta.1...HEAD
+[Unreleased]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.13-beta.2...HEAD
+[0.3.13-beta.2]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.13-beta.1...v0.3.13-beta.2
 [0.3.13-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.12...v0.3.13-beta.1
 [0.3.12]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.12-beta.1...v0.3.12
 [0.3.12-beta.1]: https://github.com/anatawa12/ContinuousAvatarUploader/compare/v0.3.11...v0.3.12-beta.1
